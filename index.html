@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSK 中文练习</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.container {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 560px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+  text-align: center;
+}
+h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
+.screen { display: none; }
+.screen.active { display: block; }
+.loading { padding: 40px 0; }
+.loading .spinner {
+  width: 40px; height: 40px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #6c63ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.level-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 16px 0 20px; }
+.level-btn {
+  padding: 10px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  background: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #888;
+}
+.level-btn:hover { border-color: #6c63ff; color: #6c63ff; }
+.level-btn.selected { background: #6c63ff; color: white; border-color: #6c63ff; }
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 8px;
+}
+.status-bar .hsk-badge {
+  background: #6c63ff;
+  color: white;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #888;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+.score-row span { font-weight: 600; color: #333; }
+.word-card {
+  background: #f8f9ff;
+  border-radius: 16px;
+  padding: 32px 20px;
+  margin-bottom: 24px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.word-card .chinese { font-size: 3.5rem; font-weight: 700; color: #1a1a2e; letter-spacing: 4px; }
+.word-card .progress { font-size: 0.8rem; color: #aaa; margin-top: 12px; }
+.input-group { margin-bottom: 16px; text-align: left; }
+.input-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+.input-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  outline: none;
+}
+.input-group input:focus { border-color: #6c63ff; }
+.input-group input.correct { border-color: #4caf50; background: #f0faf0; }
+.input-group input.wrong { border-color: #f44336; background: #fef0f0; }
+.btn-row { display: flex; gap: 12px; margin-top: 8px; }
+.btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+.btn-primary { background: #6c63ff; color: white; }
+.btn-primary:hover:not(:disabled) { background: #5b52e3; }
+.btn-secondary { background: #e8e8e8; color: #555; }
+.btn-secondary:hover:not(:disabled) { background: #ddd; }
+.feedback {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+.feedback.show { background: #f5f5f5; }
+.feedback.correct { background: #e8f5e9; color: #2e7d32; }
+.feedback.wrong { background: #fce4ec; color: #c62828; }
+.skip-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-top: 12px;
+  text-decoration: underline;
+}
+.skip-btn:hover { color: #666; }
+.reset-btn {
+  background: none;
+  border: 1px solid #ddd;
+  color: #999;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.reset-btn:hover { background: #f5f5f5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- LOADING -->
+  <div id="screenLoading" class="screen active">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p style="color:#888;">Đang tải dữ liệu từ vựng...</p>
+    </div>
+  </div>
+
+  <!-- LEVEL SELECTOR -->
+  <div id="screenLevel" class="screen">
+    <h1>HSK 中文练习</h1>
+    <p style="color:#999;font-size:0.85rem;margin:8px 0;">Chọn cấp độ muốn học</p>
+    <div class="level-grid" id="levelGrid"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="startBtn" onclick="startQuiz()" disabled>Bắt đầu</button>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="screenQuiz" class="screen">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <button class="reset-btn" onclick="backToLevel()">← Chọn lại cấp độ</button>
+      <button class="reset-btn" onclick="resetStats()">Làm lại</button>
+    </div>
+    <div class="status-bar">
+      <span class="hsk-badge" id="hskBadge">HSK3</span>
+      <span id="reviewBadge" style="display:none;background:#ff9800;color:white;padding:3px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;">🔄 Ôn tập</span>
+      <span id="wordsTotal">0 từ</span>
+    </div>
+    <div class="score-row">
+      <div>✅ <span id="correctCount">0</span></div>
+      <div>❌ <span id="wrongCount">0</span></div>
+      <div>📊 <span id="streak">0</span> liên tiếp</div>
+    </div>
+    <div class="word-card">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="chinese" id="chineseWord">—</div>
+        <button id="speakBtn" onclick="speakCurrent()" style="background:none;border:none;font-size:1.8rem;cursor:pointer;padding:4px;opacity:0.6;transition:opacity 0.15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" title="Đọc to">🔊</button>
+      </div>
+      <div class="progress" id="progressText">1 / 100</div>
+    </div>
+    <div class="input-group">
+      <label for="pinyinInput">Pinyin (phiên âm)</label>
+      <input type="text" id="pinyinInput" placeholder="vd: nǐ hǎo" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <label for="translationInput">Nghĩa tiếng Việt</label>
+      <input type="text" id="translationInput" placeholder="vd: chào" autocomplete="off">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="submitBtn" onclick="checkAnswer()">Kiểm tra</button>
+      <button class="btn btn-secondary" id="nextBtn" onclick="nextWord()" disabled>Tiếp</button>
+    </div>
+    <button class="skip-btn" onclick="skipWord()">Bỏ qua →</button>
+    <div class="feedback" id="feedback"></div>
+  </div>
+</div>
+
+<script>
+const XLSX_FILE = 'FULL TỪ VỰNG HSK1- HSK6 (2).xlsx';
+
+let allWords = [];
+let filteredWords = [];
+let currentIndex = 0;
+let correctCount = 0;
+let wrongCount = 0;
+let streak = 0;
+let answered = false;
+let order = [];
+let selectedLevels = {};
+let wrongWords = [];
+let reviewRound = false;
+
+async function loadXlsx() {
+  try {
+    const resp = await fetch(XLSX_FILE);
+    if (!resp.ok) throw new Error('Không thể tải file');
+    const buf = await resp.arrayBuffer();
+    const data = new Uint8Array(buf);
+    const wb = XLSX.read(data, { type: 'array' });
+    parseWorkbook(wb);
+  } catch (err) {
+    document.getElementById('screenLoading').innerHTML =
+      `<p style="color:#c62828;">✗ Lỗi: ${err.message}</p>
+       <p style="color:#999;font-size:0.85rem;margin-top:8px;">Đảm bảo file <strong>${XLSX_FILE}</strong> nằm cùng thư mục với index.html</p>`;
+  }
+}
+
+function parseWorkbook(wb) {
+  allWords = [];
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const level = sheetName.replace(/[^0-9]/g, '') || '?';
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || !row[1]) continue;
+      const ch = String(row[1]).trim();
+      const py = String(row[2] || '').trim();
+      const vi = String(row[3] || '').trim();
+      if (ch && py && vi) {
+        allWords.push({ ch, py, vi, level: 'HSK' + level });
+      }
+    }
+  }
+  if (allWords.length === 0) {
+    document.getElementById('screenLoading').innerHTML = '<p style="color:#c62828;">✗ Không tìm thấy từ vựng nào trong file</p>';
+    return;
+  }
+  showLevelScreen();
+}
+
+function showLevelScreen() {
+  document.getElementById('screenLoading').classList.remove('active');
+  document.getElementById('screenLevel').classList.add('active');
+
+  const levels = {};
+  for (const w of allWords) levels[w.level] = (levels[w.level] || 0) + 1;
+  selectedLevels = {};
+  const grid = document.getElementById('levelGrid');
+  grid.innerHTML = '';
+  for (const lv of Object.keys(levels).sort()) {
+    const btn = document.createElement('button');
+    btn.className = 'level-btn selected';
+    btn.textContent = `${lv} (${levels[lv]} từ)`;
+    btn.dataset.level = lv;
+    selectedLevels[lv] = true;
+    btn.addEventListener('click', () => {
+      selectedLevels[lv] = !selectedLevels[lv];
+      btn.classList.toggle('selected');
+      document.getElementById('startBtn').disabled = !Object.values(selectedLevels).some(Boolean);
+    });
+    grid.appendChild(btn);
+  }
+  document.getElementById('startBtn').disabled = false;
+}
+
+function startQuiz() {
+  filteredWords = allWords.filter(w => selectedLevels[w.level]);
+  if (filteredWords.length === 0) return;
+  document.getElementById('screenLevel').classList.remove('active');
+  document.getElementById('screenQuiz').classList.add('active');
+  reviewRound = false;
+  wrongWords = [];
+  document.getElementById('wordsTotal').textContent = filteredWords.length + ' từ';
+  document.getElementById('nextBtn').textContent = 'Tiếp';
+  document.getElementById('nextBtn').onclick = nextWord;
+  document.getElementById('speakBtn').style.display = '';
+  correctCount = 0; wrongCount = 0; streak = 0;
+  updateScore();
+  initOrder();
+  showWord();
+}
+
+function backToLevel() {
+  reviewRound = false;
+  wrongWords = [];
+  document.getElementById('nextBtn').textContent = 'Tiếp';
+  document.getElementById('nextBtn').onclick = nextWord;
+  document.getElementById('speakBtn').style.display = '';
+  document.getElementById('reviewBadge').style.display = 'none';
+  document.getElementById('screenQuiz').classList.remove('active');
+  document.getElementById('screenLevel').classList.add('active');
+}
+
+function stripTones(py) {
+  const m = {'ā':'a','á':'a','ǎ':'a','à':'a','ē':'e','é':'e','ě':'e','è':'e','ī':'i','í':'i','ǐ':'i','ì':'i','ō':'o','ó':'o','ǒ':'o','ò':'o','ū':'u','ú':'u','ǔ':'u','ù':'u','ǖ':'u','ǘ':'u','ǚ':'u','ǜ':'u'};
+  return py.toLowerCase().split('').map(c => m[c] || c).join('');
+}
+
+function normalize(str) {
+  return str.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[，。！？、；：""''【】《》\-–—·]/g, '');
+}
+
+function checkPinyin(input, correct) {
+  return stripTones(normalize(input)) === stripTones(normalize(correct)) || normalize(input) === normalize(correct);
+}
+
+function checkTranslation(input, correct) {
+  return correct.split(/[,;，；/]/).map(s => normalize(s)).includes(normalize(input));
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+
+function initOrder() { order = shuffle([...Array(filteredWords.length).keys()]); currentIndex = 0; }
+function updateScore() {
+  document.getElementById('correctCount').textContent = correctCount;
+  document.getElementById('wrongCount').textContent = wrongCount;
+  document.getElementById('streak').textContent = streak;
+}
+
+function showWord() {
+  const word = filteredWords[order[currentIndex]];
+  document.getElementById('chineseWord').textContent = word.ch;
+  document.getElementById('hskBadge').textContent = word.level;
+  document.getElementById('progressText').textContent = `${currentIndex + 1} / ${filteredWords.length}`;
+  document.getElementById('pinyinInput').value = '';
+  document.getElementById('translationInput').value = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').innerHTML = '';
+  document.getElementById('pinyinInput').className = '';
+  document.getElementById('translationInput').className = '';
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('nextBtn').disabled = true;
+  answered = false;
+  document.getElementById('pinyinInput').focus();
+}
+
+function checkAnswer() {
+  if (answered) return;
+  const word = filteredWords[order[currentIndex]];
+  const pi = document.getElementById('pinyinInput').value;
+  const ti = document.getElementById('translationInput').value;
+  if (!pi.trim() || !ti.trim()) {
+    document.getElementById('feedback').className = 'feedback show';
+    document.getElementById('feedback').innerHTML = 'Vui lòng điền cả hai ô';
+    return;
+  }
+  const pyOk = checkPinyin(pi, word.py);
+  const viOk = checkTranslation(ti, word.vi);
+  const pe = document.getElementById('pinyinInput');
+  const te = document.getElementById('translationInput');
+  const fb = document.getElementById('feedback');
+  answered = true;
+  if (pyOk && viOk) {
+    pe.className = 'correct'; te.className = 'correct';
+    fb.className = 'feedback correct'; fb.innerHTML = '✓ Chính xác!';
+    correctCount++; streak++;
+  } else {
+    pe.className = pyOk ? 'correct' : 'wrong';
+    te.className = viOk ? 'correct' : 'wrong';
+    fb.className = 'feedback wrong';
+    const parts = [];
+    if (!pyOk) parts.push(`Pinyin: ${word.py}`);
+    if (!viOk) parts.push(`Nghĩa: ${word.vi}`);
+    fb.innerHTML = `✗ ${parts.join(' | ')}`;
+    wrongCount++; streak = 0;
+    if (!wrongWords.some(w => w.ch === word.ch)) wrongWords.push(word);
+  }
+  updateScore();
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function nextWord() {
+  currentIndex++;
+  if (currentIndex >= filteredWords.length) {
+    const total = correctCount + wrongCount;
+    const fb = document.getElementById('feedback');
+    if (wrongWords.length > 0) {
+      fb.className = 'feedback show';
+      fb.innerHTML = `🎉 Xong! Đúng ${correctCount}/${total}. Còn <strong>${wrongWords.length}</strong> từ sai cần ôn tập.`;
+      document.getElementById('chineseWord').textContent = '✓';
+      document.getElementById('nextBtn').textContent = `📖 Ôn ${wrongWords.length} từ sai`;
+      document.getElementById('nextBtn').disabled = false;
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('nextBtn').onclick = startReview;
+      document.getElementById('speakBtn').style.display = 'none';
+    } else {
+      fb.className = 'feedback show';
+      fb.innerHTML = `🎉 Hoàn thành! Đúng ${correctCount}/${total} (${Math.round(correctCount / total * 100)}%) ${reviewRound ? '- Tất cả đã đúng!' : ''}`;
+      document.getElementById('nextBtn').disabled = true;
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('chineseWord').textContent = '🎉';
+    }
+    return;
+  }
+  showWord();
+}
+
+function startReview() {
+  document.getElementById('nextBtn').textContent = 'Tiếp';
+  document.getElementById('nextBtn').onclick = nextWord;
+  document.getElementById('speakBtn').style.display = '';
+  document.getElementById('reviewBadge').style.display = '';
+  filteredWords = [...wrongWords];
+  wrongWords = [];
+  reviewRound = true;
+  document.getElementById('wordsTotal').textContent = filteredWords.length + ' từ (ôn tập)';
+  correctCount = 0; wrongCount = 0; streak = 0;
+  updateScore();
+  initOrder();
+  showWord();
+}
+
+function skipWord() {
+  if (answered) return;
+  wrongCount++; streak = 0;
+  updateScore();
+  const word = filteredWords[order[currentIndex]];
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback wrong';
+  fb.innerHTML = `Đã bỏ qua: ${word.py} — ${word.vi}`;
+  document.getElementById('pinyinInput').value = word.py;
+  document.getElementById('translationInput').value = word.vi;
+  document.getElementById('pinyinInput').className = 'wrong';
+  document.getElementById('translationInput').className = 'wrong';
+  if (!wrongWords.some(w => w.ch === word.ch)) wrongWords.push(word);
+  answered = true;
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function speakCurrent() {
+  const text = document.getElementById('chineseWord').textContent;
+  if (!text || text === '✓' || text === '🎉') return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = 0.9;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+function resetStats() {
+  correctCount = 0; wrongCount = 0; streak = 0;
+  if (reviewRound) {
+    filteredWords = [...wrongWords];
+    wrongWords = [];
+  }
+  updateScore(); initOrder(); showWord();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    if (!answered && document.getElementById('screenQuiz').classList.contains('active')) checkAnswer();
+    else if (answered) nextWord();
+  }
+});
+
+loadXlsx();
+</script>
+</body>
+</html>
