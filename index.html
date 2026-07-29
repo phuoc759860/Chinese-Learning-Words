@@ -202,6 +202,7 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
       </div>
       <div class="progress" id="progressText">1 / 100</div>
     </div>
+    <audio id="ttsAudio" style="display:none"></audio>
     <div class="input-group">
       <label for="pinyinInput">Pinyin (phiên âm)</label>
       <input type="text" id="pinyinInput" placeholder="vd: nǐ hǎo" autocomplete="off">
@@ -470,9 +471,21 @@ function skipWord() {
 function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
-  const a = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
-  a.volume = 1;
-  a.play().catch(() => {});
+
+  const audio = document.getElementById('ttsAudio');
+  audio.src = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`;
+  audio.volume = 1;
+  audio.playbackRate = 0.9;
+  audio.play().catch(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      u.rate = 0.9;
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      window.speechSynthesis.speak(u);
+    }
+  });
 }
 
 function resetStats() {
@@ -491,6 +504,10 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+if ('speechSynthesis' in window) {
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+}
 loadXlsx();
 </script>
 </body>
