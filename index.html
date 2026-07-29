@@ -467,6 +467,13 @@ function skipWord() {
   document.getElementById('nextBtn').disabled = false;
 }
 
+function speakPinyinFallback(ch, py) {
+  const u = new SpeechSynthesisUtterance(py || ch);
+  u.lang = 'en-US';
+  u.rate = 0.7;
+  window.speechSynthesis.speak(u);
+}
+
 function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
@@ -483,9 +490,13 @@ function speakCurrent() {
     return;
   }
 
-  const a = new Audio(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1')}`);
+  const word = filteredWords[order[currentIndex]];
+  const a = new Audio('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1');
   a.volume = 1;
-  a.play();
+  a.play().catch(() => {
+    a.remove();
+    if (word) speakPinyinFallback(text, word.py);
+  });
 }
 
 function resetStats() {
