@@ -370,7 +370,6 @@ function showWord() {
   document.getElementById('nextBtn').disabled = true;
   answered = false;
   document.getElementById('pinyinInput').focus();
-  setTimeout(() => speakCurrent(), 300);
 }
 
 function checkAnswer() {
@@ -468,25 +467,16 @@ function skipWord() {
   document.getElementById('nextBtn').disabled = false;
 }
 
-let currentUtterance = null;
+function playAudio(url) {
+  const a = new Audio(url);
+  a.volume = 1;
+  a.play().catch(() => {});
+}
 
 function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
-  speechSynthesis.cancel();
-  currentUtterance = new SpeechSynthesisUtterance(text);
-  currentUtterance.lang = 'zh-CN';
-  currentUtterance.rate = 0.9;
-  currentUtterance.volume = 1;
-  const voices = speechSynthesis.getVoices();
-  const zhVoice = voices.find(v => v.lang.startsWith('zh'));
-  if (zhVoice) currentUtterance.voice = zhVoice;
-  speechSynthesis.speak(currentUtterance);
-}
-
-if (speechSynthesis) {
-  speechSynthesis.getVoices();
-  speechSynthesis.onvoiceschanged = () => {};
+  playAudio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`);
 }
 
 function resetStats() {
