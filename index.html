@@ -201,13 +201,37 @@ h1 { font-size: 1.15rem; color: #444; margin-bottom: 8px; letter-spacing: 2px; f
 <div class="container">
   <div class="user-bar">
     <span>👤 <span class="name" id="userNameDisplay">User</span></span>
-    <button class="history-btn" onclick="showHistory()">📊 Lịch sử</button>
+    <span>
+      <button class="history-btn" id="loginBtn" onclick="showLogin()">🔑 Đăng nhập</button>
+      <button class="history-btn" id="logoutBtn" onclick="logout()" style="display:none;">🚪 Thoát</button>
+      <button class="history-btn" onclick="showHistory()">📊 Lịch sử</button>
+    </span>
   </div>
   <div class="lang-bar">
     <button class="lang-btn active" id="langCn" onclick="switchLang('cn')">🇨🇳 中文</button>
     <button class="lang-btn" id="langJp" onclick="switchLang('jp')">🇯🇵 日本語</button>
     <button class="lang-btn" id="langEn" onclick="switchLang('en')">🇬🇧 English</button>
     <button class="lang-btn" id="langFr" onclick="switchLang('fr')">🇫🇷 Français</button>
+  </div>
+
+  <!-- LOGIN / REGISTER -->
+  <div id="screenLogin" class="screen">
+    <h1>🔑 Đăng nhập</h1>
+    <p style="color:#999;font-size:0.85rem;margin:8px 0;">Đồng bộ từ vựng trên mọi thiết bị</p>
+    <div class="input-group">
+      <label for="loginUsername">Tên đăng nhập</label>
+      <input type="text" id="loginUsername" placeholder="username" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <label for="loginPassword">Mật khẩu</label>
+      <input type="password" id="loginPassword" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doLogin()">Đăng nhập</button>
+      <button class="btn btn-secondary" onclick="doRegister()">Đăng ký</button>
+    </div>
+    <button class="skip-btn" onclick="hideLogin()" style="margin-top:10px;">← Tiếp tục dùng offline</button>
+    <div id="loginError" style="color:#c62828;font-size:0.85rem;margin-top:10px;min-height:20px;"></div>
   </div>
 
   <!-- LOADING -->
@@ -1306,8 +1330,8 @@ let wrongWords = [];
 let reviewRound = false;
 let maxStreak = 0;
 
-const LANG_NAMES = { cn:'Chinese', jp:'Japanese', en:'English' };
-const LANG_FLAGS = { cn:'🇨🇳', jp:'🇯🇵', en:'🇬🇧' };
+const LANG_NAMES = { cn:'Chinese', jp:'Japanese', en:'English', fr:'French' };
+const LANG_FLAGS = { cn:'🇨🇳', jp:'🇯🇵', en:'🇬🇧', fr:'🇫🇷' };
 
 function getUserName() {
   let name = localStorage.getItem('userName');
@@ -1371,27 +1395,133 @@ function backToLevelFromHist() {
   document.getElementById('screenLevel').classList.add('active');
 }
 
-function getCustomWords(lang) {
-  return JSON.parse(localStorage.getItem('customWords_' + lang) || '[]');
+/* ---------- Auth ---------- */
+function getToken() { return localStorage.getItem('authToken'); }
+function setToken(t) { localStorage.setItem('authToken', t); }
+function clearToken() { localStorage.removeItem('authToken'); }
+function isLoggedIn() { return !!getToken(); }
+
+function authHeaders() {
+  const t = getToken();
+  return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : {};
 }
 
-function mergeCustomWords(base) {
-  const custom = getCustomWords(currentLang);
-  return custom.length ? [...base, ...custom] : base;
+function showLogin() {
+  document.getElementById('screenLogin').classList.add('active');
+  document.getElementById('loginError').textContent = '';
 }
 
-function toggleAddWord() {
-  const form = document.getElementById('addWordForm');
-  form.style.display = form.style.display === 'none' ? '' : 'none';
-  if (form.style.display !== 'none') {
-  document.getElementById('addReadingGroup').style.display = (currentLang === 'en' || currentLang === 'fr') ? 'none' : '';
-    document.getElementById('addWordCh').focus();
-    showCustomWordList();
+function hideLogin() {
+  document.getElementById('screenLogin').classList.remove('active');
+}
+
+function updateLoginUI() {
+  const loggedIn = isLoggedIn();
+  document.getElementById('loginBtn').style.display = loggedIn ? 'none' : '';
+  document.getElementById('logoutBtn').style.display = loggedIn ? '' : 'none';
+  if (loggedIn) {
+    document.getElementById('userNameDisplay').textContent = localStorage.getItem('loggedUsername') || 'User';
   }
 }
 
-function showCustomWordList() {
-  const words = getCustomWords(currentLang);
+async function doLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  if (!username || !password) { errEl.textContent = 'Vui lòng nhập đầy đủ'; return; }
+  try {
+    const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username,password}) });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.error; return; }
+    setToken(d.token);
+    localStorage.setItem('loggedUsername', d.username);
+    localStorage.setItem('userName', d.username);
+    hideLogin();
+    updateLoginUI();
+    document.getElementById('userNameDisplay').textContent = d.username;
+    syncLocalToServer();
+  } catch(e) { errEl.textContent = 'Lỗi kết nối server'; }
+}
+
+async function doRegister() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  if (!username || !password) { errEl.textContent = 'Vui lòng nhập đầy đủ'; return; }
+  if (password.length < 4) { errEl.textContent = 'Mật khẩu ít nhất 4 ký tự'; return; }
+  try {
+    const r = await fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username,password}) });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.error; return; }
+    setToken(d.token);
+    localStorage.setItem('loggedUsername', d.username);
+    localStorage.setItem('userName', d.username);
+    hideLogin();
+    updateLoginUI();
+    document.getElementById('userNameDisplay').textContent = d.username;
+    syncLocalToServer();
+  } catch(e) { errEl.textContent = 'Lỗi kết nối server'; }
+}
+
+function logout() {
+  clearToken();
+  localStorage.removeItem('loggedUsername');
+  updateLoginUI();
+  document.getElementById('userNameDisplay').textContent = getUserName();
+}
+
+async function syncLocalToServer() {
+  if (!isLoggedIn()) return;
+  for (const lang of ['cn','jp','en','fr']) {
+    const local = JSON.parse(localStorage.getItem('customWords_' + lang) || '[]');
+    if (!local.length) continue;
+    try {
+      const r = await fetch('/api/words/' + lang + '/sync', { method:'POST', headers:authHeaders(), body:JSON.stringify({words:local}) });
+      if (r.ok) {
+        const d = await r.json();
+        localStorage.setItem('customWords_' + lang, JSON.stringify(d.words.map(w => ({ch:w.ch, py:w.py || '', vi:w.vi, level:'Từ của tôi'}))));
+      }
+    } catch(e) {}
+  }
+  refreshLevelScreen();
+}
+
+/* ---------- Custom Words (local + server) ---------- */
+async function getCustomWords(lang) {
+  const local = JSON.parse(localStorage.getItem('customWords_' + lang) || '[]');
+  if (!isLoggedIn()) return local;
+  try {
+    const r = await fetch('/api/words/' + lang, { headers:authHeaders() });
+    if (r.ok) {
+      const server = await r.json();
+      const merged = server.map(w => ({ch:w.ch, py:w.py || '', vi:w.vi, level:'Từ của tôi'}));
+      const localSet = new Set(local.map(w => w.ch));
+      const serverSet = new Set(merged.map(w => w.ch));
+      for (const w of local) { if (!serverSet.has(w.ch)) merged.push(w); }
+      for (const w of merged) { if (!localSet.has(w.ch)) local.push({ch:w.ch, py:w.py || '', vi:w.vi, level:'Từ của tôi'}); }
+      localStorage.setItem('customWords_' + lang, JSON.stringify(merged));
+      return merged;
+    }
+  } catch(e) {}
+  return local;
+}
+
+function mergeCustomWords(base) {
+  return base;
+}
+
+async function toggleAddWord() {
+  const form = document.getElementById('addWordForm');
+  form.style.display = form.style.display === 'none' ? '' : 'none';
+  if (form.style.display !== 'none') {
+    document.getElementById('addReadingGroup').style.display = (currentLang === 'en' || currentLang === 'fr') ? 'none' : '';
+    document.getElementById('addWordCh').focus();
+    await showCustomWordList();
+  }
+}
+
+async function showCustomWordList() {
+  const words = await getCustomWords(currentLang);
   const el = document.getElementById('customWordList');
   if (!words.length) { el.innerHTML = '<span style="color:#aaa;">Chưa có từ nào</span>'; return; }
   let html = `<strong>Từ của tôi (${words.length}):</strong><br>`;
@@ -1399,65 +1529,82 @@ function showCustomWordList() {
     const w = words[i];
     html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #eee;">
       <span><b>${w.ch}</b>${w.py ? ' (' + w.py + ')' : ''} — ${w.vi}</span>
-      <button onclick="deleteCustomWord(${i})" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:0.8rem;">✕</button>
+      <button onclick="deleteCustomWord('${w.ch.replace(/'/g, "\\'")}')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:0.8rem;">✕</button>
     </div>`;
   }
   el.innerHTML = html;
 }
 
-function saveCustomWord() {
+async function saveCustomWord() {
   const ch = document.getElementById('addWordCh').value.trim();
   const py = document.getElementById('addWordPy').value.trim();
   const vi = document.getElementById('addWordVi').value.trim();
   if (!ch || !vi) { alert('Vui lòng nhập từ và nghĩa'); return; }
-  const words = getCustomWords(currentLang);
+  let words = await getCustomWords(currentLang);
   if (words.some(w => w.ch === ch)) { alert('Từ này đã có trong danh sách'); return; }
+  if (isLoggedIn()) {
+    try {
+      const r = await fetch('/api/words/' + currentLang, { method:'POST', headers:authHeaders(), body:JSON.stringify({ch, py, vi}) });
+      if (!r.ok) { const d = await r.json(); alert(d.error || 'Lỗi lưu'); return; }
+    } catch(e) { alert('Lỗi kết nối server'); return; }
+  }
   words.push({ ch, py, vi, level: 'Từ của tôi' });
   localStorage.setItem('customWords_' + currentLang, JSON.stringify(words));
   document.getElementById('addWordCh').value = '';
   document.getElementById('addWordPy').value = '';
   document.getElementById('addWordVi').value = '';
-  showCustomWordList();
+  await showCustomWordList();
   refreshLevelScreen();
 }
 
-function deleteCustomWord(idx) {
-  const words = getCustomWords(currentLang);
+async function deleteCustomWord(ch) {
+  let words = await getCustomWords(currentLang);
+  const idx = words.findIndex(w => w.ch === ch);
+  if (idx === -1) return;
   words.splice(idx, 1);
+  if (isLoggedIn()) {
+    try { await fetch('/api/words/' + currentLang + '/' + encodeURIComponent(ch), { method:'DELETE', headers:authHeaders() }); }
+    catch(e) {}
+  }
   localStorage.setItem('customWords_' + currentLang, JSON.stringify(words));
-  showCustomWordList();
+  await showCustomWordList();
   refreshLevelScreen();
 }
 
 function exportCustomWords() {
-  const words = getCustomWords(currentLang);
-  if (!words.length) { alert('Không có từ nào để xuất'); return; }
-  const blob = new Blob([JSON.stringify(words, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'words_' + currentLang + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
+  getCustomWords(currentLang).then(words => {
+    if (!words.length) { alert('Không có từ nào để xuất'); return; }
+    const blob = new Blob([JSON.stringify(words, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'words_' + currentLang + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
 }
 
 function importCustomWords(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const imported = JSON.parse(e.target.result);
       if (!Array.isArray(imported) || !imported.length) { alert('File không hợp lệ'); return; }
-      const existing = getCustomWords(currentLang);
+      let words = await getCustomWords(currentLang);
       let added = 0;
       for (const w of imported) {
-        if (w.ch && w.vi && !existing.some(x => x.ch === w.ch)) {
-          existing.push({ ch: w.ch, py: w.py || '', vi: w.vi, level: 'Từ của tôi' });
+        if (w.ch && w.vi && !words.some(x => x.ch === w.ch)) {
+          words.push({ ch: w.ch, py: w.py || '', vi: w.vi, level: 'Từ của tôi' });
           added++;
         }
       }
-      localStorage.setItem('customWords_' + currentLang, JSON.stringify(existing));
-      showCustomWordList();
+      if (isLoggedIn()) {
+        try { await fetch('/api/words/' + currentLang + '/import', { method:'POST', headers:authHeaders(), body:JSON.stringify({words:imported}) }); }
+        catch(e) {}
+      }
+      localStorage.setItem('customWords_' + currentLang, JSON.stringify(words));
+      await showCustomWordList();
       refreshLevelScreen();
       alert('Đã nhập ' + added + ' từ mới' + (imported.length - added > 0 ? ' (' + (imported.length - added) + ' từ trùng bỏ qua)' : ''));
     } catch (err) {
@@ -1468,27 +1615,29 @@ function importCustomWords(event) {
   event.target.value = '';
 }
 
-function refreshLevelScreen() {
+async function refreshLevelScreen() {
+  const custom = await getCustomWords(currentLang);
+  function merge(base) { return custom.length ? [...base, ...custom] : base; }
   if (currentLang === 'cn') {
     if (typeof allWordsXlsx !== 'undefined' && allWordsXlsx.length) {
-      allWords = mergeCustomWords(allWordsXlsx);
+      allWords = merge(allWordsXlsx);
       showLevelScreen();
     } else {
       loadXlsx();
     }
   } else if (currentLang === 'jp') {
-    allWords = mergeCustomWords(allJp);
+    allWords = merge(allJp);
     showLevelScreen();
   } else if (currentLang === 'en') {
-    allWords = mergeCustomWords(allEn);
+    allWords = merge(allEn);
     showLevelScreen();
   } else if (currentLang === 'fr') {
-    allWords = mergeCustomWords(allFr);
+    allWords = merge(allFr);
     showLevelScreen();
   }
 }
 
-function switchLang(lang) {
+async function switchLang(lang) {
   currentLang = lang;
   document.getElementById('langCn').className = 'lang-btn' + (lang === 'cn' ? ' active' : '');
   document.getElementById('langJp').className = 'lang-btn' + (lang === 'jp' ? ' active' : '');
@@ -1503,19 +1652,17 @@ function switchLang(lang) {
   document.getElementById('screenLevel').classList.remove('active');
   document.getElementById('screenHistory').classList.remove('active');
   document.getElementById('screenLoading').classList.remove('active');
+  document.getElementById('screenLogin').classList.remove('active');
 
   document.getElementById('userNameDisplay').textContent = getUserName();
   document.getElementById('addWordForm').style.display = 'none';
 
   if (lang === 'jp') {
-    allWords = mergeCustomWords(allJp);
-    showLevelScreen();
+    await refreshLevelScreen();
   } else if (lang === 'en') {
-    allWords = mergeCustomWords(allEn);
-    showLevelScreen();
+    await refreshLevelScreen();
   } else if (lang === 'fr') {
-    allWords = mergeCustomWords(allFr);
-    showLevelScreen();
+    await refreshLevelScreen();
   } else {
     document.getElementById('screenLoading').classList.add('active');
     document.getElementById('loadingMsg').textContent = 'Đang tải dữ liệu từ vựng...';
@@ -1538,7 +1685,7 @@ async function loadXlsx() {
   }
 }
 
-function parseWorkbook(wb) {
+async function parseWorkbook(wb) {
   allWordsXlsx = [];
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
@@ -1559,7 +1706,9 @@ function parseWorkbook(wb) {
     document.getElementById('screenLoading').innerHTML = '<p style="color:#c62828;">✗ Không tìm thấy từ vựng nào trong file</p>';
     return;
   }
-  allWords = mergeCustomWords(allWordsXlsx);
+  allWords = allWordsXlsx;
+  const custom = await getCustomWords('cn');
+  if (custom.length) allWords = [...allWords, ...custom];
   showLevelScreen();
 }
 
@@ -1859,6 +2008,7 @@ if ('speechSynthesis' in window) {
 
 getUserName();
 document.getElementById('userNameDisplay').textContent = getUserName();
+updateLoginUI();
 loadXlsx();
 </script>
 </body>
