@@ -1334,12 +1334,9 @@ const LANG_NAMES = { cn:'Chinese', jp:'Japanese', en:'English', fr:'French' };
 const LANG_FLAGS = { cn:'🇨🇳', jp:'🇯🇵', en:'🇬🇧', fr:'🇫🇷' };
 
 function getUserName() {
-  let name = localStorage.getItem('userName');
-  if (!name) {
-    name = prompt('Nhập tên của bạn:', '') || 'User';
-    if (name.trim()) localStorage.setItem('userName', name.trim());
-  }
-  return name;
+  const logged = localStorage.getItem('loggedUsername');
+  if (logged) return logged;
+  return 'Guest';
 }
 
 function saveSession(lang, level, correct, wrong, total) {
@@ -1419,9 +1416,7 @@ function updateLoginUI() {
   const loggedIn = isLoggedIn();
   document.getElementById('loginBtn').style.display = loggedIn ? 'none' : '';
   document.getElementById('logoutBtn').style.display = loggedIn ? '' : 'none';
-  if (loggedIn) {
-    document.getElementById('userNameDisplay').textContent = localStorage.getItem('loggedUsername') || 'User';
-  }
+  document.getElementById('userNameDisplay').textContent = getUserName();
 }
 
 async function doLogin() {
@@ -1435,10 +1430,8 @@ async function doLogin() {
     if (!r.ok) { errEl.textContent = d.error; return; }
     setToken(d.token);
     localStorage.setItem('loggedUsername', d.username);
-    localStorage.setItem('userName', d.username);
     hideLogin();
     updateLoginUI();
-    document.getElementById('userNameDisplay').textContent = d.username;
     syncLocalToServer();
   } catch(e) { errEl.textContent = 'Lỗi kết nối server'; }
 }
@@ -1455,10 +1448,8 @@ async function doRegister() {
     if (!r.ok) { errEl.textContent = d.error; return; }
     setToken(d.token);
     localStorage.setItem('loggedUsername', d.username);
-    localStorage.setItem('userName', d.username);
     hideLogin();
     updateLoginUI();
-    document.getElementById('userNameDisplay').textContent = d.username;
     syncLocalToServer();
   } catch(e) { errEl.textContent = 'Lỗi kết nối server'; }
 }
@@ -1654,7 +1645,7 @@ async function switchLang(lang) {
   document.getElementById('screenLoading').classList.remove('active');
   document.getElementById('screenLogin').classList.remove('active');
 
-  document.getElementById('userNameDisplay').textContent = getUserName();
+  updateLoginUI();
   document.getElementById('addWordForm').style.display = 'none';
 
   if (lang === 'jp') {
@@ -2006,8 +1997,6 @@ if ('speechSynthesis' in window) {
   speechSynthesis.onvoiceschanged = checkVoices;
 }
 
-getUserName();
-document.getElementById('userNameDisplay').textContent = getUserName();
 updateLoginUI();
 loadXlsx();
 </script>
