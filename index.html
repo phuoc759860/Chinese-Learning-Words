@@ -220,6 +220,11 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
         <button class="btn btn-secondary" onclick="toggleAddWord()" style="font-size:0.9rem;padding:10px;">Hủy</button>
       </div>
       <div id="customWordList" style="margin-top:12px;font-size:0.85rem;"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;">
+        <button onclick="exportCustomWords()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 12px;font-size:0.8rem;cursor:pointer;">📤 Xuất</button>
+        <button onclick="document.getElementById('importFileInput').click()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 12px;font-size:0.8rem;cursor:pointer;">📥 Nhập</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importCustomWords(event)">
+      </div>
     </div>
   </div>
 
@@ -1089,6 +1094,45 @@ function deleteCustomWord(idx) {
   localStorage.setItem('customWords_' + currentLang, JSON.stringify(words));
   showCustomWordList();
   refreshLevelScreen();
+}
+
+function exportCustomWords() {
+  const words = getCustomWords(currentLang);
+  if (!words.length) { alert('Không có từ nào để xuất'); return; }
+  const blob = new Blob([JSON.stringify(words, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'words_' + currentLang + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importCustomWords(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported) || !imported.length) { alert('File không hợp lệ'); return; }
+      const existing = getCustomWords(currentLang);
+      let added = 0;
+      for (const w of imported) {
+        if (w.ch && w.vi && !existing.some(x => x.ch === w.ch)) {
+          existing.push({ ch: w.ch, py: w.py || '', vi: w.vi, level: 'Từ của tôi' });
+          added++;
+        }
+      }
+      localStorage.setItem('customWords_' + currentLang, JSON.stringify(existing));
+      showCustomWordList();
+      refreshLevelScreen();
+      alert('Đã nhập ' + added + ' từ mới' + (imported.length - added > 0 ? ' (' + (imported.length - added) + ' từ trùng bỏ qua)' : ''));
+    } catch (err) {
+      alert('Lỗi đọc file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
 }
 
 function refreshLevelScreen() {
