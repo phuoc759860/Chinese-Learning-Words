@@ -151,6 +151,16 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
   text-decoration: underline;
 }
 .skip-btn:hover { color: #666; }
+.user-bar { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.85rem;color:#888; }
+.user-bar .name { font-weight:600;color:#6c63ff; }
+.history-btn { background:none;border:none;color:#999;cursor:pointer;font-size:0.85rem;padding:2px 8px;border-radius:6px; }
+.history-btn:hover { background:#f0f0ff;color:#6c63ff; }
+.history-table { width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:12px; }
+.history-table th { background:#f0f0ff;color:#6c63ff;padding:8px;font-weight:600; }
+.history-table td { padding:8px;border-bottom:1px solid #eee; }
+.history-table tr:hover td { background:#f8f9ff; }
+.record-label { font-size:0.75rem;color:#aaa;margin-top:4px; }
+.record-value { font-size:1rem;font-weight:600;color:#333; }
 .reset-btn {
   background: none;
   border: 1px solid #ddd;
@@ -165,9 +175,14 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
 </head>
 <body>
 <div class="container">
+  <div class="user-bar">
+    <span>👤 <span class="name" id="userNameDisplay">User</span></span>
+    <button class="history-btn" onclick="showHistory()">📊 Lịch sử</button>
+  </div>
   <div class="lang-bar">
     <button class="lang-btn active" id="langCn" onclick="switchLang('cn')">🇨🇳 中文</button>
     <button class="lang-btn" id="langJp" onclick="switchLang('jp')">🇯🇵 日本語</button>
+    <button class="lang-btn" id="langEn" onclick="switchLang('en')">🇬🇧 English</button>
   </div>
 
   <!-- LOADING -->
@@ -185,6 +200,30 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
     <div class="level-grid" id="levelGrid"></div>
     <div class="btn-row">
       <button class="btn btn-primary" id="startBtn" onclick="startQuiz()" disabled>Bắt đầu</button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="screenHistory" class="screen">
+    <h1>📊 Lịch sử & Xếp hạng</h1>
+    <div style="display:flex;gap:16px;justify-content:center;margin:16px 0 20px;">
+      <div><div class="record-label">Người dùng</div><div class="record-value" id="histUserName">—</div></div>
+      <div><div class="record-label">Tổng lượt</div><div class="record-value" id="histTotalSessions">0</div></div>
+      <div><div class="record-label">Điểm cao nhất</div><div class="record-value" id="histBestPct">0%</div></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:0.85rem;color:#888;">Lọc:</label>
+      <select id="histLangFilter" onchange="showHistory()" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:0.85rem;">
+        <option value="all">Tất cả</option>
+        <option value="cn">🇨🇳 Chinese</option>
+        <option value="jp">🇯🇵 Japanese</option>
+        <option value="en">🇬🇧 English</option>
+      </select>
+    </div>
+    <div id="histList"></div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="backToLevelFromHist()">← Quay lại</button>
+      <button class="btn btn-secondary" onclick="clearHistory()" style="color:#c62828;">🗑 Xóa lịch sử</button>
     </div>
   </div>
 
@@ -211,7 +250,7 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
       </div>
       <div class="progress" id="progressText">1 / 100</div>
     </div>
-    <div class="input-group">
+    <div class="input-group" id="readingGroup">
       <label for="pinyinInput" id="readingLabel">Pinyin (phiên âm)</label>
       <input type="text" id="pinyinInput" placeholder="vd: nǐ hǎo" autocomplete="off">
     </div>
@@ -674,6 +713,226 @@ const jpWordsN1 = `愛|あい|tình yêu
 
 const allJp = [...jpWords, ...jpWordsN4, ...jpWordsN3, ...jpWordsN2, ...jpWordsN1].map(w => ({...w, level: 'JLPT ' + w.level}));
 
+const enBasic = `hello|xin chào
+goodbye|tạm biệt
+thank you|cảm ơn
+please|làm ơn
+sorry|xin lỗi
+help|giúp đỡ
+water|nước
+food|thức ăn
+eat|ăn
+drink|uống
+sleep|ngủ
+go|đi
+come|đến
+see|thấy
+look|nhìn
+listen|nghe
+speak|nói
+read|đọc
+write|viết
+big|lớn
+small|nhỏ
+hot|nóng
+cold|lạnh
+good|tốt
+bad|xấu
+beautiful|đẹp
+happy|vui
+sad|buồn
+love|yêu
+friend|bạn
+family|gia đình
+house|nhà
+school|trường
+work|làm việc
+book|sách
+table|bàn
+chair|ghế
+door|cửa
+window|cửa sổ
+day|ngày
+night|đêm
+morning|sáng
+afternoon|chiều
+evening|tối
+today|hôm nay
+tomorrow|ngày mai
+yesterday|hôm qua
+week|tuần
+month|tháng
+year|năm
+time|thời gian
+money|tiền
+new|mới
+old|cũ
+young|trẻ
+long|dài
+short|ngắn
+fast|nhanh
+slow|chậm
+easy|dễ
+difficult|khó
+sweet|ngọt
+hungry|đói
+tired|mệt
+name|tên
+weather|thời tiết
+spring|xuân
+summer|hè
+autumn|thu
+winter|đông
+rain|mưa
+snow|tuyết
+sun|mặt trời
+moon|mặt trăng
+tree|cây
+flower|hoa
+river|sông
+mountain|núi
+sea|biển
+city|thành phố
+street|đường
+bridge|cầu
+park|công viên
+market|chợ
+shop|cửa hàng
+hospital|bệnh viện
+bank|ngân hàng
+hotel|khách sạn
+airport|sân bay
+library|thư viện
+kitchen|nhà bếp
+bedroom|phòng ngủ
+key|chìa khóa
+rice|cơm
+bread|bánh mì
+egg|trứng
+meat|thịt
+fish|cá
+fruit|trái cây
+apple|táo
+banana|chuối
+milk|sữa
+coffee|cà phê
+tea|trà
+sugar|đường
+salt|muối
+father|cha
+mother|mẹ
+brother|anh trai
+sister|chị gái
+baby|em bé
+child|trẻ em
+teacher|giáo viên
+doctor|bác sĩ
+driver|tài xế
+body|cơ thể
+head|đầu
+eye|mắt
+ear|tai
+nose|mũi
+mouth|miệng
+hand|tay
+foot|chân
+heart|tim
+health|sức khỏe`.trim().split('\n').map(l => { const [ch, vi] = l.split('|'); return {ch, py:'', vi, level:'Basic'}; });
+
+const enAdv = `important|quan trọng
+different|khác nhau
+possible|có thể
+necessary|cần thiết
+successful|thành công
+experience|kinh nghiệm
+knowledge|kiến thức
+information|thông tin
+education|giáo dục
+business|kinh doanh
+development|phát triển
+government|chính phủ
+environment|môi trường
+economy|kinh tế
+technology|công nghệ
+communication|giao tiếp
+decision|quyết định
+responsibility|trách nhiệm
+opportunity|cơ hội
+challenge|thách thức
+improve|cải thiện
+achieve|đạt được
+consider|xem xét
+continue|tiếp tục
+increase|tăng
+decrease|giảm
+provide|cung cấp
+require|yêu cầu
+support|hỗ trợ
+prepare|chuẩn bị
+protect|bảo vệ
+encourage|khuyến khích
+appreciate|đánh giá cao
+comprehensive|toàn diện
+significant|quan trọng
+consequently|do đó
+nevertheless|tuy nhiên
+furthermore|hơn nữa
+phenomenon|hiện tượng
+perspective|quan điểm
+contemporary|đương đại
+innovation|đổi mới
+implementation|thực hiện
+demonstrate|chứng minh
+contribute|đóng góp
+establish|thành lập
+investigate|điều tra
+participate|tham gia
+interpret|giải thích
+infrastructure|cơ sở hạ tầng
+sustainability|bền vững
+collaboration|hợp tác
+transformation|chuyển đổi
+productivity|năng suất
+initiative|sáng kiến
+transparency|minh bạch
+controversial|gây tranh cãi
+consciousness|ý thức
+phenomenon|hiện tượng
+hypothesis|giả thuyết
+perspective|quan điểm
+profound|sâu sắc
+fundamental|cơ bản
+inevitable|không thể tránh
+threshold|ngưỡng
+diverse|đa dạng
+integrate|tích hợp
+optimize|tối ưu hóa
+generate|tạo ra
+analyze|phân tích
+evaluate|đánh giá
+formulate|xây dựng
+prioritize|ưu tiên
+facilitate|tạo điều kiện
+compensate|bồi thường
+accumulate|tích lũy
+discriminate|phân biệt
+legitimate|hợp pháp
+sufficient|đủ
+excessive|quá mức
+inevitable|tất yếu
+compatible|tương thích
+feasible|khả thi
+vulnerable|dễ bị tổn thương
+resilient|kiên cường
+ambiguous|mơ hồ
+rigorous|nghiêm ngặt
+empirical|thực nghiệm
+theoretical|lý thuyết
+subjective|chủ quan
+objective|khách quan`.trim().split('\n').map(l => { const [ch, vi] = l.split('|'); return {ch, py:'', vi, level:'Advanced'}; });
+
+const allEn = [...enBasic, ...enAdv];
+
 let currentLang = 'cn';
 let allWords = [];
 let filteredWords = [];
@@ -686,11 +945,78 @@ let order = [];
 let selectedLevels = {};
 let wrongWords = [];
 let reviewRound = false;
+let maxStreak = 0;
+
+const LANG_NAMES = { cn:'Chinese', jp:'Japanese', en:'English' };
+const LANG_FLAGS = { cn:'🇨🇳', jp:'🇯🇵', en:'🇬🇧' };
+
+function getUserName() {
+  let name = localStorage.getItem('userName');
+  if (!name) {
+    name = prompt('Nhập tên của bạn:', '') || 'User';
+    if (name.trim()) localStorage.setItem('userName', name.trim());
+  }
+  return name;
+}
+
+function saveSession(lang, level, correct, wrong, total) {
+  const history = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+  history.unshift({
+    date: new Date().toISOString(),
+    lang, level, correct, wrong, total,
+    pct: total > 0 ? Math.round(correct / total * 100) : 0
+  });
+  if (history.length > 200) history.length = 200;
+  localStorage.setItem('quizHistory', JSON.stringify(history));
+  localStorage.setItem('maxStreak_' + lang, Math.max(maxStreak, parseInt(localStorage.getItem('maxStreak_' + lang) || '0')));
+}
+
+function showHistory() {
+  const history = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+  const filter = document.getElementById('histLangFilter').value;
+  const filtered = filter === 'all' ? history : history.filter(h => h.lang === filter);
+  const name = getUserName();
+  document.getElementById('histUserName').textContent = name;
+  document.getElementById('histTotalSessions').textContent = filtered.length;
+  const best = filtered.reduce((m, h) => h.pct > m ? h.pct : m, 0);
+  document.getElementById('histBestPct').textContent = best + '%';
+
+  const list = document.getElementById('histList');
+  if (filtered.length === 0) {
+    list.innerHTML = '<p style="color:#aaa;padding:20px;">Chưa có lịch sử</p>';
+  } else {
+    let html = '<table class="history-table"><tr><th>Ngày</th><th>Ngôn ngữ</th><th>Cấp độ</th><th>Điểm</th><th>%</th></tr>';
+    for (const h of filtered) {
+      const d = new Date(h.date);
+      const ds = d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
+      html += `<tr><td>${ds}</td><td>${LANG_FLAGS[h.lang] || ''} ${h.lang.toUpperCase()}</td><td>${h.level}</td><td>${h.correct}/${h.total}</td><td><strong>${h.pct}%</strong></td></tr>`;
+    }
+    html += '</table>';
+    list.innerHTML = html;
+  }
+
+  document.getElementById('screenQuiz').classList.remove('active');
+  document.getElementById('screenLevel').classList.remove('active');
+  document.getElementById('screenHistory').classList.add('active');
+}
+
+function clearHistory() {
+  if (confirm('Xóa toàn bộ lịch sử?')) {
+    localStorage.setItem('quizHistory', '[]');
+    showHistory();
+  }
+}
+
+function backToLevelFromHist() {
+  document.getElementById('screenHistory').classList.remove('active');
+  document.getElementById('screenLevel').classList.add('active');
+}
 
 function switchLang(lang) {
   currentLang = lang;
   document.getElementById('langCn').className = 'lang-btn' + (lang === 'cn' ? ' active' : '');
   document.getElementById('langJp').className = 'lang-btn' + (lang === 'jp' ? ' active' : '');
+  document.getElementById('langEn').className = 'lang-btn' + (lang === 'en' ? ' active' : '');
 
   document.getElementById('nextBtn').textContent = 'Tiếp';
   document.getElementById('nextBtn').onclick = nextWord;
@@ -698,10 +1024,16 @@ function switchLang(lang) {
   document.getElementById('reviewBadge').style.display = 'none';
   document.getElementById('screenQuiz').classList.remove('active');
   document.getElementById('screenLevel').classList.remove('active');
+  document.getElementById('screenHistory').classList.remove('active');
   document.getElementById('screenLoading').classList.remove('active');
+
+  document.getElementById('userNameDisplay').textContent = getUserName();
 
   if (lang === 'jp') {
     allWords = allJp;
+    showLevelScreen();
+  } else if (lang === 'en') {
+    allWords = allEn;
     showLevelScreen();
   } else {
     document.getElementById('screenLoading').classList.add('active');
@@ -753,7 +1085,8 @@ function showLevelScreen() {
   document.getElementById('screenLoading').classList.remove('active');
   document.getElementById('screenLevel').classList.add('active');
 
-  document.getElementById('levelTitle').textContent = currentLang === 'jp' ? 'JLPT 日本語練習' : 'HSK 中文练习';
+  const titles = { cn:'HSK 中文练习', jp:'JLPT 日本語練習', en:'English Practice' };
+  document.getElementById('levelTitle').textContent = titles[currentLang] || 'Practice';
   document.getElementById('startBtn').textContent = 'Bắt đầu';
 
   const levels = {};
@@ -784,11 +1117,15 @@ function startQuiz() {
   document.getElementById('screenQuiz').classList.add('active');
   reviewRound = false;
   wrongWords = [];
+  maxStreak = 0;
   document.getElementById('wordsTotal').textContent = filteredWords.length + ' từ';
 
+  const isEn = currentLang === 'en';
   const isJp = currentLang === 'jp';
+  const rg = document.getElementById('readingGroup');
+  rg.style.display = isEn ? 'none' : '';
   document.getElementById('readingLabel').textContent = isJp ? 'Hiragana' : 'Pinyin (phiên âm)';
-  document.getElementById('pinyinInput').placeholder = isJp ? 'vd: あう' : 'vd: nǐ hǎo';
+  document.getElementById('pinyinInput').placeholder = isJp ? 'vd: あう' : (isEn ? '' : 'vd: nǐ hǎo');
 
   document.getElementById('nextBtn').textContent = 'Tiếp';
   document.getElementById('nextBtn').onclick = nextWord;
@@ -853,36 +1190,40 @@ function showWord() {
   document.getElementById('submitBtn').disabled = false;
   document.getElementById('nextBtn').disabled = true;
   answered = false;
-  document.getElementById('pinyinInput').focus();
+  const focusEl = currentLang === 'en' ? document.getElementById('translationInput') : document.getElementById('pinyinInput');
+  focusEl.focus();
 }
 
 function checkAnswer() {
   if (answered) return;
   const word = filteredWords[order[currentIndex]];
-  const pi = document.getElementById('pinyinInput').value;
+  const isEn = currentLang === 'en';
+  const pi = isEn ? '' : document.getElementById('pinyinInput').value;
   const ti = document.getElementById('translationInput').value;
-  if (!pi.trim() || !ti.trim()) {
+  if ((!isEn && !pi.trim()) || !ti.trim()) {
     document.getElementById('feedback').className = 'feedback show';
-    document.getElementById('feedback').innerHTML = 'Vui lòng điền cả hai ô';
+    document.getElementById('feedback').innerHTML = isEn ? 'Vui lòng nhập nghĩa tiếng Việt' : 'Vui lòng điền cả hai ô';
     return;
   }
   const isJp = currentLang === 'jp';
-  const pyOk = checkPinyin(pi, word.py);
+  const pyOk = isEn || checkPinyin(pi, word.py);
   const viOk = checkTranslation(ti, word.vi);
   const pe = document.getElementById('pinyinInput');
   const te = document.getElementById('translationInput');
   const fb = document.getElementById('feedback');
   answered = true;
   if (pyOk && viOk) {
-    pe.className = 'correct'; te.className = 'correct';
+    if (!isEn) pe.className = 'correct';
+    te.className = 'correct';
     fb.className = 'feedback correct'; fb.innerHTML = '✓ Chính xác!';
     correctCount++; streak++;
+    if (streak > maxStreak) maxStreak = streak;
   } else {
-    pe.className = pyOk ? 'correct' : 'wrong';
+    if (!isEn) pe.className = pyOk ? 'correct' : 'wrong';
     te.className = viOk ? 'correct' : 'wrong';
     fb.className = 'feedback wrong';
     const parts = [];
-    if (!pyOk) parts.push(`${isJp ? 'Hiragana' : 'Pinyin'}: ${word.py}`);
+    if (!isEn && !pyOk) parts.push(`${isJp ? 'Hiragana' : 'Pinyin'}: ${word.py}`);
     if (!viOk) parts.push(`Nghĩa: ${word.vi}`);
     fb.innerHTML = `✗ ${parts.join(' | ')}`;
     wrongCount++; streak = 0;
@@ -893,12 +1234,20 @@ function checkAnswer() {
   document.getElementById('nextBtn').disabled = false;
 }
 
+function finishQuiz() {
+  const total = correctCount + wrongCount;
+  const pct = total > 0 ? Math.round(correctCount / total * 100) : 0;
+  const level = filteredWords.length > 0 ? filteredWords[0].level : '?';
+  saveSession(currentLang, level, correctCount, wrongCount, total);
+}
+
 function nextWord() {
   currentIndex++;
   if (currentIndex >= filteredWords.length) {
     const total = correctCount + wrongCount;
     const fb = document.getElementById('feedback');
     if (wrongWords.length > 0) {
+      finishQuiz();
       fb.className = 'feedback show';
       fb.innerHTML = `🎉 Xong! Đúng ${correctCount}/${total}. Còn <strong>${wrongWords.length}</strong> từ sai cần ôn tập.`;
       document.getElementById('chineseWord').textContent = '✓';
@@ -908,8 +1257,9 @@ function nextWord() {
       document.getElementById('nextBtn').onclick = startReview;
       document.getElementById('speakBtn').style.display = 'none';
     } else {
+      finishQuiz();
       fb.className = 'feedback show';
-      fb.innerHTML = `🎉 Hoàn thành! Đúng ${correctCount}/${total} (${Math.round(correctCount / total * 100)}%) ${reviewRound ? '- Tất cả đã đúng!' : ''}`;
+      fb.innerHTML = `🎉 Hoàn thành! Đúng ${correctCount}/${total} (${pct}%) ${reviewRound ? '- Tất cả đã đúng!' : ''}`;
       document.getElementById('nextBtn').disabled = true;
       document.getElementById('submitBtn').disabled = true;
       document.getElementById('chineseWord').textContent = '🎉';
@@ -939,13 +1289,15 @@ function skipWord() {
   wrongCount++; streak = 0;
   updateScore();
   const word = filteredWords[order[currentIndex]];
+  const isEn = currentLang === 'en';
   const fb = document.getElementById('feedback');
-  const isJp = currentLang === 'jp';
   fb.className = 'feedback wrong';
-  fb.innerHTML = `Đã bỏ qua: ${word.py} — ${word.vi}`;
-  document.getElementById('pinyinInput').value = word.py;
+  fb.innerHTML = `Đã bỏ qua: ${isEn ? word.ch + ' — ' + word.vi : word.py + ' — ' + word.vi}`;
+  if (!isEn) {
+    document.getElementById('pinyinInput').value = word.py;
+    document.getElementById('pinyinInput').className = 'wrong';
+  }
   document.getElementById('translationInput').value = word.vi;
-  document.getElementById('pinyinInput').className = 'wrong';
   document.getElementById('translationInput').className = 'wrong';
   if (!wrongWords.some(w => w.ch === word.ch)) wrongWords.push(word);
   answered = true;
@@ -957,9 +1309,10 @@ function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
 
+  const enVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('en'));
   const jpVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   const zhVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('zh'));
-  const targetVoice = currentLang === 'jp' ? jpVoice : zhVoice;
+  const targetVoice = currentLang === 'jp' ? jpVoice : (currentLang === 'en' ? enVoice : zhVoice);
 
   if (targetVoice) {
     window.speechSynthesis.cancel();
@@ -972,15 +1325,12 @@ function speakCurrent() {
   }
 
   const word = filteredWords[order[currentIndex]];
-  const url = currentLang === 'jp'
-    ? 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1'
-    : 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1';
-  const a = new Audio(url);
+  const a = new Audio('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1');
   a.volume = 1;
   a.play().catch(() => {
     a.remove();
-    if (word && currentLang === 'cn') {
-      const u = new SpeechSynthesisUtterance(word.py || text);
+    if (word && currentLang === 'cn' && word.py) {
+      const u = new SpeechSynthesisUtterance(word.py);
       u.lang = 'en-US';
       u.rate = 0.7;
       window.speechSynthesis.speak(u);
@@ -1007,7 +1357,6 @@ document.addEventListener('keydown', function(e) {
 if ('speechSynthesis' in window) {
   const checkVoices = () => {
     const voices = speechSynthesis.getVoices();
-    console.log('Speech: found', voices.length, 'voices');
     if (voices.length > 0) {
       speechSynthesis.cancel();
       speechSynthesis.resume();
@@ -1016,6 +1365,9 @@ if ('speechSynthesis' in window) {
   checkVoices();
   speechSynthesis.onvoiceschanged = checkVoices;
 }
+
+getUserName();
+document.getElementById('userNameDisplay').textContent = getUserName();
 loadXlsx();
 </script>
 </body>
