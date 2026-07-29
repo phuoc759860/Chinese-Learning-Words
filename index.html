@@ -7,6 +7,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+.lang-bar { display:flex;gap:0;margin-bottom:20px;border-radius:10px;overflow:hidden;border:2px solid #6c63ff; }
+.lang-btn { flex:1;padding:10px;border:none;font-size:0.95rem;font-weight:600;cursor:pointer;background:#fff;color:#888;transition:all 0.15s; }
+.lang-btn.active { background:#6c63ff;color:#fff; }
+.lang-btn:hover:not(.active) { background:#f0f0ff; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -161,17 +165,22 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
 </head>
 <body>
 <div class="container">
+  <div class="lang-bar">
+    <button class="lang-btn active" id="langCn" onclick="switchLang('cn')">🇨🇳 中文</button>
+    <button class="lang-btn" id="langJp" onclick="switchLang('jp')">🇯🇵 日本語</button>
+  </div>
+
   <!-- LOADING -->
   <div id="screenLoading" class="screen active">
     <div class="loading">
       <div class="spinner"></div>
-      <p style="color:#888;">Đang tải dữ liệu từ vựng...</p>
+      <p id="loadingMsg" style="color:#888;">Đang tải dữ liệu từ vựng...</p>
     </div>
   </div>
 
   <!-- LEVEL SELECTOR -->
   <div id="screenLevel" class="screen">
-    <h1>HSK 中文练习</h1>
+    <h1 id="levelTitle">HSK 中文练习</h1>
     <p style="color:#999;font-size:0.85rem;margin:8px 0;">Chọn cấp độ muốn học</p>
     <div class="level-grid" id="levelGrid"></div>
     <div class="btn-row">
@@ -203,7 +212,7 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
       <div class="progress" id="progressText">1 / 100</div>
     </div>
     <div class="input-group">
-      <label for="pinyinInput">Pinyin (phiên âm)</label>
+      <label for="pinyinInput" id="readingLabel">Pinyin (phiên âm)</label>
       <input type="text" id="pinyinInput" placeholder="vd: nǐ hǎo" autocomplete="off">
     </div>
     <div class="input-group">
@@ -222,6 +231,450 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
 <script>
 const XLSX_FILE = 'FULL TỪ VỰNG HSK1- HSK6 (2).xlsx';
 
+const jpWords = `会う|あう|gặp,chào hỏi
+青い|あおい|xanh
+赤い|あかい|đỏ
+秋|あき|mùa thu
+開く|あく|mở ra
+朝|あさ|buổi sáng
+足|あし|chân
+明日|あした|ngày mai
+遊ぶ|あそぶ|chơi
+頭|あたま|đầu
+新しい|あたらしい|mới
+暑い|あつい|nóng
+雨|あめ|mưa
+洗う|あらう|rửa
+歩く|あるく|đi bộ
+言う|いう|nói
+行く|いく|đi
+忙しい|いそがしい|bận
+痛い|いたい|đau
+犬|いぬ|chó
+今|いま|bây giờ
+妹|いもうと|em gái
+色|いろ|màu sắc
+歌|うた|bài hát
+海|うみ|biển
+駅|えき|nhà ga
+美味しい|おいしい|ngon
+大きい|おおきい|to,lớn
+起きる|おきる|thức dậy
+教える|おしえる|dạy
+弟|おとうと|em trai
+大人|おとな|người lớn
+同じ|おなじ|giống
+面白い|おもしろい|thú vị
+泳ぐ|およぐ|bơi
+音楽|おんがく|âm nhạc
+会社|かいしゃ|công ty
+学生|がくせい|học sinh
+学校|がっこう|trường học
+家族|かぞく|gia đình
+風邪|かぜ|cảm lạnh
+漢字|かんじ|chữ Hán
+木|き|cây
+聞く|きく|nghe
+昨日|きのう|hôm qua
+今日|きょう|hôm nay
+教室|きょうしつ|lớp học
+去年|きょねん|năm ngoái
+銀行|ぎんこう|ngân hàng
+薬|くすり|thuốc
+果物|くだもの|trái cây
+口|くち|miệng
+靴|くつ|giày
+国|くに|đất nước
+車|くるま|xe
+結婚|けっこん|kết hôn
+公園|こうえん|công viên
+紅茶|こうちゃ|trà đen
+言葉|ことば|từ ngữ
+子供|こども|trẻ em
+魚|さかな|cá
+仕事|しごと|công việc
+写真|しゃしん|ảnh
+宿題|しゅくだい|bài tập
+上手|じょうず|giỏi
+食べる|たべる|ăn
+小さい|ちいさい|nhỏ
+近い|ちかい|gần
+違う|ちがう|khác
+地下鉄|ちかてつ|tàu điện ngầm
+地図|ちず|bản đồ
+天気|てんき|thời tiết
+電話|でんわ|điện thoại
+動物|どうぶつ|động vật
+友達|ともだち|bạn
+名前|なまえ|tên
+肉|にく|thịt
+猫|ねこ|mèo
+飲む|のむ|uống
+花|はな|hoa
+話す|はなす|nói chuyện
+人|ひと|người
+飛行機|ひこうき|máy bay
+病院|びょういん|bệnh viện
+勉強|べんきょう|học
+本|ほん|sách
+毎日|まいにち|hàng ngày
+水|みず|nước
+道|みち|đường
+店|みせ|cửa hàng
+見る|みる|xem
+山|やま|núi
+休み|やすみ|nghỉ
+安い|やすい|rẻ
+雪|ゆき|tuyết
+料理|りょうり|nấu ăn
+牛乳|ぎゅうにゅう|sữa
+卵|たまご|trứng
+飲み物|のみもの|đồ uống
+食べ物|たべもの|đồ ăn
+新聞|しんぶん|báo
+手紙|てがみ|thư
+電気|でんき|điện
+電車|でんしゃ|tàu điện
+図書館|としょかん|thư viện
+友だち|ともだち|bạn bè
+中|なか|bên trong
+夏|なつ|mùa hè
+何|なに|cái gì
+猫|ねこ|mèo
+歯|は|răng
+春|はる|mùa xuân
+冬|ふゆ|mùa đông
+窓|まど|cửa sổ
+南|みなみ|nam
+南口|みなみぐち|cửa nam
+目|め|mắt
+物|もの|đồ
+森|もり|rừng
+野菜|やさい|rau
+休日|きゅうじつ|ngày nghỉ
+林|はやし|rừng nhỏ
+旅|たび|du lịch
+留守|るす|vắng nhà
+冷蔵庫|れいぞうこ|tủ lạnh
+練習|れんしゅう|luyện tập
+廊下|ろうか|hành lang
+若い|わかい|trẻ
+私|わたし|tôi`.trim().split('\n').map(l => { const [ch, py, vi] = l.split('|'); return {ch, py, vi, level:'N5'}; });
+
+const jpWordsN4 = `味|あじ|vị
+危ない|あぶない|nguy hiểm
+甘い|あまい|ngọt
+安心|あんしん|yên tâm
+石|いし|đá
+意見|いけん|ý kiến
+運動|うんどう|vận động
+絵|え|tranh
+遠足|えんそく|dã ngoại
+温泉|おんせn|suối nước nóng
+階段|かいだん|cầu thang
+会話|かいわ|hội thoại
+科学|かがく|khoa học
+返事|へんじ|trả lời
+学者|がくしゃ|học giả
+関係|かんけい|quan hệ
+病気|びょうき|bệnh
+銀行|ぎんこう|ngân hàng
+経験|けいけん|kinh nghiệm
+健康|けんこう|sức khỏe
+交通|こうつう|giao thông
+世界|せかい|thế giới
+観光|かんこう|tham quan
+図書館|としょかん|thư viện
+住所|じゅうしょ|địa chỉ
+授業|じゅぎょう|bài học
+将来|しょうらい|tương lai
+招待|しょうたい|mời
+紹介|しょうかい|giới thiệu
+食堂|しょくどう|nhà ăn
+進歩|しんぽ|tiến bộ
+水道|すいどう|vòi nước
+生活|せいかつ|cuộc sống
+世界|せかい|thế giới
+準備|じゅんび|chuẩn bị
+相談|そうだん|bàn bạc
+尊敬|そんけい|tôn kính
+体育|たいいく|thể dục
+大使館|たいしかん|đại sứ quán
+大抵|たいてい|đại khái
+台所|だいどころ|nhà bếp
+暖房|だんぼう|sưởi ấm
+注文|ちゅうもん|đặt hàng
+通訳|つうやく|phiên dịch
+都合|つごう|tiện lợi
+鉄道|てつどう|đường sắt
+天気予報|てんきよほう|dự báo thời tiết
+電報|でんぽう|điện báo
+当然|とうぜn|đương nhiên
+動物|どうぶつ|động vật
+登録|とうろく|đăng ký
+時計|とけい|đồng hồ
+特に|とくに|đặc biệt
+隣|となり|bên cạnh
+届ける|とどける|gửi
+泊まる|とまる|ở lại
+直す|なおす|sửa
+治る|なおる|khỏi bệnh
+慣れる|なれる|quen
+認める|みとめる|công nhận
+値段|ねだん|giá cả
+熱|ねつ|sốt
+眠い|ねむい|buồn ngủ
+残る|のこる|còn lại
+乗り換え|のりかえ|chuyển tàu
+入口|いりぐち|lối vào
+売り場|うりば|quầy bán
+葉書|はがき|bưu thiếp
+箱|はこ|hộp
+始まる|はじまる|bắt đầu
+初めて|はじめて|lần đầu
+発生|はっせい|phát sinh
+離れる|はなれる|xa rời
+母親|ははおや|mẹ
+林|はやし|rừng
+払う|はらう|trả tiền
+反対|はんたい|phản đối
+日記|にっき|nhật ký
+美術館|びじゅつかん|bảo tàng
+必要|ひつよう|cần thiết
+非常|ひじょう|khẩn cấp
+平等|びょうどう|bình đẳng
+品物|しなもの|hàng hóa
+夫婦|ふうふ|vợ chồng
+複雑|ふくざつ|phức tạp
+文化|ぶんか|văn hóa
+平和|へいわ|hòa bình
+訪問|ほうもん|thăm
+毎月|まいげつ|hàng tháng
+迷子|まいご|lạc đường
+真似|まね|bắt chước
+港|みなと|cảng
+迎える|むかえる|đón
+務める|つとめる|làm việc
+難しい|むずかしい|khó
+村|むら|làng
+目指す|めざす|nhắm
+申し込む|もうしこむ|đăng ký
+燃える|もえる|cháy
+文句|もんく|phàn nàn
+屋上|おくじょう|sân thượng
+約束|やくそく|lời hứa
+休暇|きゅうか|kỳ nghỉ
+旅行|りょこう|du lịch
+留守番|るすばn|trông nhà
+歴史|れきし|lịch sử
+連絡|れんらく|liên lạc
+忘れる|わすれる|quên`.trim().split('\n').map(l => { const [ch, py, vi] = l.split('|'); return {ch, py, vi, level:'N4'}; });
+
+const jpWordsN3 = `挨拶|あいさつ|lời chào
+預ける|あずける|gửi
+慌てる|あわてる|hoảng hốt
+石鹸|せっけn|xà phòng
+意見|いけn|ý kiến
+贈り物|おくりもの|quà tặng
+可能性|かのうせい|khả năng
+関係|かんけい|quan hệ
+季節|きせつ|mùa
+緊張|きんちょう|căng thẳng
+組合|くみあい|tổ hợp
+経験|けいけん|kinh nghiệm
+健康|けんこう|sức khỏe
+効果|こうか|hiệu quả
+高校|こうこう|trung học
+国際|こくさい|quốc tế
+最近|さいきん|gần đây
+作品|さくひん|tác phẩm
+産業|さんぎょう|công nghiệp
+試験|しけん|kỳ thi
+事故|じこ|tai nạn
+時代|じだい|thời đại
+質問|しつもn|câu hỏi
+失敗|しっぱい|thất bại
+習慣|しゅうかん|thói quen
+紹介|しょうかい|giới thiệu
+消防|しょうぼう|cứu hỏa
+将来|しょうらい|tương lai
+食事|しょくじ|bữa ăn
+人口|じんこう|dân số
+水道|すいどう|vòi nước
+数|すう|số
+性格|せいかく|tính cách
+成功|せいこう|thành công
+製品|せいひん|sản phẩm
+政治|せいじ|chính trị
+世界|せかい|thế giới
+説明|せつめい|giải thích
+戦争|せんそう|chiến tranh
+想像|そうぞう|tưởng tượng
+相談|そうだん|tư vấn
+不足|ふそく|thiếu
+大切|たいせつ|quan trọng
+代表|だいひょう|đại diện
+立場|たちば|vị trí
+暖房|だんぼう|sưởi
+注意|ちゅうい|chú ý
+通勤|つうきn|đi làm
+定年|ていねn|về hưu
+適当|てきとう|thích hợp
+天井|てんじょう|trần nhà
+統計|とうけい|thống kê
+突然|とつぜん|đột nhiên
+努力|どりょく|cố gắng
+夏休み|なつやすみ|nghỉ hè
+認める|みとめる|thừa nhận
+熱心|ねっしん|nhiệt tình
+能率|のうりつ|hiệu suất
+判断|はんだn|phán đoán
+批評|ひひょう|phê bình
+評価|ひょうか|đánh giá
+不満|ふまん|bất mãn
+文法|ぶんぽう|ngữ pháp
+返事|へんじ|trả lời
+訪問|ほうもn|thăm hỏi
+毎週|まいしゅう|hàng tuần
+迷惑|めいわく|phiền hà
+面接|めんせつ|phỏng vấn
+目的|もくてき|mục đích
+問題|もんだい|vấn đề
+有名|ゆうめい|nổi tiếng
+予定|よてい|dự định
+利用|りよう|sử dụng
+両方|りょうほう|cả hai
+練習|れんしゅう|luyện tập
+連絡|れんらく|liên lạc
+我々|われわれ|chúng tôi`.trim().split('\n').map(l => { const [ch, py, vi] = l.split('|'); return {ch, py, vi, level:'N3'}; });
+
+const jpWordsN2 = `圧力|あつりょく|áp lực
+愛情|あいじょう|tình yêu
+案内|あんない|hướng dẫn
+意識|いしき|ý thức
+偉大|いだい|vĩ đại
+運命|うんめい|số phận
+栄養|えいよう|dinh dưỡng
+永久|えいきゅう|vĩnh cửu
+価値|かち|giá trị
+環境|かんきょう|môi trường
+技術|ぎじゅつ|kỹ thuật
+規模|きぼ|quy mô
+協力|きょうりょく|hợp tác
+苦労|くろう|khổ cực
+計画|けいかく|kế hoạch
+結果|けっか|kết quả
+建築|けんちく|kiến trúc
+研究|けんきゅう|nghiên cứu
+交流|こうりゅう|giao lưu
+講義|こうぎ|bài giảng
+幸福|こうふく|hạnh phúc
+財政|ざいせい|tài chính
+裁判|さいばん|tòa án
+参加|さんか|tham gia
+資源|しげん|tài nguyên
+実施|じっし|thực hiện
+支払う|しはらう|chi trả
+社会|しゃかい|xã hội
+自由|じゆう|tự do
+十分|じゅうぶn|đầy đủ
+商業|しょうぎょう|thương mại
+条件|じょうけん|điều kiện
+常識|じょうしき|kiến thức thông thường
+職業|しょくぎょう|nghề nghiệp
+信用|しんよう|tín nhiệm
+推薦|すいせん|tiến cử
+生活|せいかつ|sinh hoạt
+制度|せいど|chế độ
+絶対|ぜったい|tuyệt đối
+専門|せんもn|chuyên môn
+総理大臣|そうりだいじん|thủ tướng
+態|たい|trạng thái
+地域|ちいき|khu vực
+知識|ちしき|kiến thức
+著作権|ちょさくけn|bản quyền
+通信|つうしn|thông tin
+程度|ていど|trình độ
+典型的|てんけいてき|điển hình
+投資|とうし|đầu tư
+特徴|とくちょう|đặc trưng
+人間|にんげn|con người
+農業|のうぎょう|nông nghiệp
+比較|ひかく|so sánh
+表現|ひょうげn|biểu hiện
+文化|ぶんか|văn hóa
+法律|ほうりつ|pháp luật
+貿易|ぼうえき|mậu dịch
+豊か|ゆたか|phong phú
+要素|ようそ|yếu tố
+理解|りかい|hiểu biết
+領土|りょうど|lãnh thổ
+論点|ろんでん|luận điểm`.trim().split('\n').map(l => { const [ch, py, vi] = l.split('|'); return {ch, py, vi, level:'N2'}; });
+
+const jpWordsN1 = `愛|あい|tình yêu
+悪化|あっか|xấu đi
+圧迫|あっぱく|áp bức
+維持|いじ|duy trì
+違反|いはん|vi phạm
+宇宙|うちゅu|vũ trụ
+運営|うんえい|vận hành
+永遠|えいえん|vĩnh hằng
+汚染|おせん|ô nhiễm
+改革|かいかく|cải cách
+解釈|かいしゃく|giải thích
+獲得|かくとく|đạt được
+勧告|かんこく|khuyên cáo
+監視|かんし|giám sát
+企画|きかく|kế hoạch
+規律|きりつ|kỷ luật
+吸収|きゅうしゅう|hấp thụ
+強化|きょうか|tăng cường
+狂う|くるう|điên cuồng
+計算|けいさん|tính toán
+決議|けつぎ|quyết nghị
+嫌疑|けんぎ|nghi ngờ
+控除|こうじょ|khấu trừ
+公正|こうせい|công chính
+混乱|こんらん|hỗn loạn
+削減|さくげn|giảm bớt
+資源|しげn|tài nguyên
+自主|じしゅ|tự chủ
+実施|じっし|thực thi
+収穫|しゅうかく|thu hoạch
+純粋|じゅんすい|thuần khiết
+商標|しょうひょう|nhãn hiệu
+条約|じょうやく|hiệp ước
+除外|じょがい|loại trừ
+真実|しんじつ|sự thật
+推進|すいしん|thúc đẩy
+制裁|せいさい|chế tài
+設立|せつりつ|thành lập
+全滅|ぜんめつ|toàn diệt
+増加|ぞうか|tăng gia
+対策|たいさく|đối sách
+中断|ちゅうだn|gián đoạn
+貯金|ちょきn|tiết kiệm
+追放|ついほう|trục xuất
+提案|ていあn|đề xuất
+統制|とうせい|kiểm soát
+日没|にちぼつ|hoàng hôn
+廃棄|はいき|hủy bỏ
+評価|ひょうか|đánh giá
+腐敗|ふはい|thối nát
+復興|ふっこう|phục hưng
+崩壊|ほうかい|sụp đổ
+民主|みんしゅ|dân chủ
+黙認|もくにん|mặc nhiên
+優先|ゆうせn|ưu tiên
+融合|ゆうごう|dung hợp
+欲望|よくぼう|dục vọng
+乱暴|らんぼう|bạo lực
+倫理|りんり|luân lý
+連邦|れんぽう|liên bang`.trim().split('\n').map(l => { const [ch, py, vi] = l.split('|'); return {ch, py, vi, level:'N1'}; });
+
+const allJp = [...jpWords, ...jpWordsN4, ...jpWordsN3, ...jpWordsN2, ...jpWordsN1].map(w => ({...w, level: 'JLPT ' + w.level}));
+
+let currentLang = 'cn';
 let allWords = [];
 let filteredWords = [];
 let currentIndex = 0;
@@ -233,6 +686,29 @@ let order = [];
 let selectedLevels = {};
 let wrongWords = [];
 let reviewRound = false;
+
+function switchLang(lang) {
+  currentLang = lang;
+  document.getElementById('langCn').className = 'lang-btn' + (lang === 'cn' ? ' active' : '');
+  document.getElementById('langJp').className = 'lang-btn' + (lang === 'jp' ? ' active' : '');
+
+  document.getElementById('nextBtn').textContent = 'Tiếp';
+  document.getElementById('nextBtn').onclick = nextWord;
+  document.getElementById('speakBtn').style.display = '';
+  document.getElementById('reviewBadge').style.display = 'none';
+  document.getElementById('screenQuiz').classList.remove('active');
+  document.getElementById('screenLevel').classList.remove('active');
+  document.getElementById('screenLoading').classList.remove('active');
+
+  if (lang === 'jp') {
+    allWords = allJp;
+    showLevelScreen();
+  } else {
+    document.getElementById('screenLoading').classList.add('active');
+    document.getElementById('loadingMsg').textContent = 'Đang tải dữ liệu từ vựng...';
+    loadXlsx();
+  }
+}
 
 async function loadXlsx() {
   try {
@@ -277,6 +753,9 @@ function showLevelScreen() {
   document.getElementById('screenLoading').classList.remove('active');
   document.getElementById('screenLevel').classList.add('active');
 
+  document.getElementById('levelTitle').textContent = currentLang === 'jp' ? 'JLPT 日本語練習' : 'HSK 中文练习';
+  document.getElementById('startBtn').textContent = 'Bắt đầu';
+
   const levels = {};
   for (const w of allWords) levels[w.level] = (levels[w.level] || 0) + 1;
   selectedLevels = {};
@@ -306,6 +785,11 @@ function startQuiz() {
   reviewRound = false;
   wrongWords = [];
   document.getElementById('wordsTotal').textContent = filteredWords.length + ' từ';
+
+  const isJp = currentLang === 'jp';
+  document.getElementById('readingLabel').textContent = isJp ? 'Hiragana' : 'Pinyin (phiên âm)';
+  document.getElementById('pinyinInput').placeholder = isJp ? 'vd: あう' : 'vd: nǐ hǎo';
+
   document.getElementById('nextBtn').textContent = 'Tiếp';
   document.getElementById('nextBtn').onclick = nextWord;
   document.getElementById('speakBtn').style.display = '';
@@ -336,7 +820,7 @@ function normalize(str) {
 }
 
 function checkPinyin(input, correct) {
-  return stripTones(normalize(input)) === stripTones(normalize(correct)) || normalize(input) === normalize(correct);
+  return normalize(input) === normalize(correct);
 }
 
 function checkTranslation(input, correct) {
@@ -382,6 +866,7 @@ function checkAnswer() {
     document.getElementById('feedback').innerHTML = 'Vui lòng điền cả hai ô';
     return;
   }
+  const isJp = currentLang === 'jp';
   const pyOk = checkPinyin(pi, word.py);
   const viOk = checkTranslation(ti, word.vi);
   const pe = document.getElementById('pinyinInput');
@@ -397,7 +882,7 @@ function checkAnswer() {
     te.className = viOk ? 'correct' : 'wrong';
     fb.className = 'feedback wrong';
     const parts = [];
-    if (!pyOk) parts.push(`Pinyin: ${word.py}`);
+    if (!pyOk) parts.push(`${isJp ? 'Hiragana' : 'Pinyin'}: ${word.py}`);
     if (!viOk) parts.push(`Nghĩa: ${word.vi}`);
     fb.innerHTML = `✗ ${parts.join(' | ')}`;
     wrongCount++; streak = 0;
@@ -455,6 +940,7 @@ function skipWord() {
   updateScore();
   const word = filteredWords[order[currentIndex]];
   const fb = document.getElementById('feedback');
+  const isJp = currentLang === 'jp';
   fb.className = 'feedback wrong';
   fb.innerHTML = `Đã bỏ qua: ${word.py} — ${word.vi}`;
   document.getElementById('pinyinInput').value = word.py;
@@ -467,35 +953,38 @@ function skipWord() {
   document.getElementById('nextBtn').disabled = false;
 }
 
-function speakPinyinFallback(ch, py) {
-  const u = new SpeechSynthesisUtterance(py || ch);
-  u.lang = 'en-US';
-  u.rate = 0.7;
-  window.speechSynthesis.speak(u);
-}
-
 function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
 
+  const jpVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   const zhVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('zh'));
+  const targetVoice = currentLang === 'jp' ? jpVoice : zhVoice;
 
-  if (zhVoice) {
+  if (targetVoice) {
     window.speechSynthesis.cancel();
     if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     const u = new SpeechSynthesisUtterance(text);
-    u.voice = zhVoice;
+    u.voice = targetVoice;
     u.rate = 0.9;
     window.speechSynthesis.speak(u);
     return;
   }
 
   const word = filteredWords[order[currentIndex]];
-  const a = new Audio('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1');
+  const url = currentLang === 'jp'
+    ? 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1'
+    : 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1';
+  const a = new Audio(url);
   a.volume = 1;
   a.play().catch(() => {
     a.remove();
-    if (word) speakPinyinFallback(text, word.py);
+    if (word && currentLang === 'cn') {
+      const u = new SpeechSynthesisUtterance(word.py || text);
+      u.lang = 'en-US';
+      u.rate = 0.7;
+      window.speechSynthesis.speak(u);
+    }
   });
 }
 
@@ -515,13 +1004,10 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-let hasChineseVoice = false;
 if ('speechSynthesis' in window) {
   const checkVoices = () => {
     const voices = speechSynthesis.getVoices();
-    hasChineseVoice = voices.some(v => v.lang.startsWith('zh'));
-    console.log('Speech: found', voices.length, 'voices, Chinese:', hasChineseVoice);
-    voices.forEach(v => console.log(' -', v.name, v.lang));
+    console.log('Speech: found', voices.length, 'voices');
     if (voices.length > 0) {
       speechSynthesis.cancel();
       speechSynthesis.resume();
