@@ -7,13 +7,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-.lang-bar { display:flex;gap:0;margin-bottom:20px;border-radius:10px;overflow:hidden;border:2px solid #6c63ff; }
-.lang-btn { flex:1;padding:10px;border:none;font-size:0.95rem;font-weight:600;cursor:pointer;background:#fff;color:#888;transition:all 0.15s; }
-.lang-btn.active { background:#6c63ff;color:#fff; }
-.lang-btn:hover:not(.active) { background:#f0f0ff; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -21,24 +17,33 @@ body {
   padding: 20px;
 }
 .container {
-  background: white;
-  border-radius: 20px;
-  padding: 40px;
-  max-width: 560px;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 580px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+  box-shadow: 0 25px 80px rgba(0,0,0,0.35);
   text-align: center;
+  animation: fadeUp 0.4s ease;
 }
-h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
+@keyframes fadeUp { from { opacity:0;transform:translateY(20px); } to { opacity:1;transform:translateY(0); } }
+h1 { font-size: 1.15rem; color: #444; margin-bottom: 8px; letter-spacing: 2px; font-weight: 700; }
 .screen { display: none; }
-.screen.active { display: block; }
+.screen.active { display: block; animation: fadeUp 0.35s ease; }
+
+.lang-bar { display:flex;gap:0;margin-bottom:20px;border-radius:12px;overflow:hidden;background:#f0f0f5; }
+.lang-btn { flex:1;padding:10px 6px;border:none;font-size:0.82rem;font-weight:600;cursor:pointer;background:transparent;color:#888;transition:all 0.2s;white-space:nowrap; }
+.lang-btn.active { background: linear-gradient(135deg,#667eea,#764ba2);color:#fff;box-shadow:0 4px 15px rgba(102,126,234,0.4); }
+.lang-btn:hover:not(.active) { color:#667eea; }
+
 .loading { padding: 40px 0; }
 .loading .spinner {
-  width: 40px; height: 40px;
-  border: 4px solid #e0e0e0;
-  border-top-color: #6c63ff;
+  width: 44px; height: 44px;
+  border: 4px solid #e8e8f0;
+  border-top-color: #667eea;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
   margin: 0 auto 16px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -46,131 +51,150 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
 .level-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 16px 0 20px; }
 .level-btn {
   padding: 10px 20px;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  border: 2px solid #e4e4ef;
+  border-radius: 12px;
   background: white;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
   color: #888;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-.level-btn:hover { border-color: #6c63ff; color: #6c63ff; }
-.level-btn.selected { background: #6c63ff; color: white; border-color: #6c63ff; }
+.level-btn:hover { border-color: #667eea; color: #667eea; transform: translateY(-1px); }
+.level-btn.selected { background: linear-gradient(135deg,#667eea,#764ba2); color: white; border-color: transparent; box-shadow: 0 4px 15px rgba(102,126,234,0.35); }
+
 .status-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
-  color: #888;
-  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: #999;
+  margin-bottom: 10px;
 }
 .status-bar .hsk-badge {
-  background: #6c63ff;
+  background: linear-gradient(135deg,#667eea,#764ba2);
   color: white;
-  padding: 3px 12px;
+  padding: 3px 14px;
   border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(102,126,234,0.3);
 }
 .score-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
-  color: #888;
+  font-size: 0.88rem;
+  color: #999;
   margin-bottom: 20px;
-  padding-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid #eee;
 }
-.score-row span { font-weight: 600; color: #333; }
+.score-row span { font-weight: 700; color: #333; }
 .word-card {
-  background: #f8f9ff;
-  border-radius: 16px;
-  padding: 32px 20px;
+  background: linear-gradient(135deg,#f8f9ff,#f0f2ff);
+  border-radius: 18px;
+  padding: 36px 20px 28px;
   margin-bottom: 24px;
   min-height: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  box-shadow: inset 0 1px 3px rgba(255,255,255,0.6), 0 4px 20px rgba(102,126,234,0.08);
 }
 .word-card .chinese { font-size: 3.5rem; font-weight: 700; color: #1a1a2e; letter-spacing: 4px; }
-.word-card .progress { font-size: 0.8rem; color: #aaa; margin-top: 12px; }
-.input-group { margin-bottom: 16px; text-align: left; }
-.input-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+.word-card .progress { font-size: 0.78rem; color: #bbb; margin-top: 10px; }
+
+.input-group { margin-bottom: 14px; text-align: left; }
+.input-group label { display: block; font-size: 0.82rem; font-weight: 700; color: #555; margin-bottom: 5px; letter-spacing: 0.3px; }
 .input-group input {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  border: 2px solid #e4e4ef;
+  border-radius: 12px;
   font-size: 1rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s;
   outline: none;
+  background: #fafafe;
 }
-.input-group input:focus { border-color: #6c63ff; }
+.input-group input:focus { border-color: #667eea; box-shadow: 0 0 0 4px rgba(102,126,234,0.1); background: white; }
 .input-group input.correct { border-color: #4caf50; background: #f0faf0; }
-.input-group input.wrong { border-color: #f44336; background: #fef0f0; }
+.input-group input.wrong { border-color: #f44336; background: #fff0f0; }
+
 .btn-row { display: flex; gap: 12px; margin-top: 8px; }
 .btn {
   flex: 1;
   padding: 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s, opacity 0.15s;
+  transition: transform 0.15s, box-shadow 0.2s, opacity 0.15s;
+  letter-spacing: 0.3px;
 }
 .btn:active { transform: scale(0.97); }
-.btn:disabled { opacity: 0.5; cursor: default; transform: none; }
-.btn-primary { background: #6c63ff; color: white; }
-.btn-primary:hover:not(:disabled) { background: #5b52e3; }
-.btn-secondary { background: #e8e8e8; color: #555; }
-.btn-secondary:hover:not(:disabled) { background: #ddd; }
+.btn:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: none; }
+.btn-primary { background: linear-gradient(135deg,#667eea,#764ba2); color: white; box-shadow: 0 4px 15px rgba(102,126,234,0.35); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 6px 25px rgba(102,126,234,0.45); transform: translateY(-1px); }
+.btn-secondary { background: #eef0f7; color: #555; }
+.btn-secondary:hover:not(:disabled) { background: #e2e4ef; }
+
 .feedback {
   min-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-top: 16px;
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 0.95rem;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: all 0.2s;
 }
-.feedback.show { background: #f5f5f5; }
+.feedback.show { background: #f5f5f5; color: #888; }
 .feedback.correct { background: #e8f5e9; color: #2e7d32; }
 .feedback.wrong { background: #fce4ec; color: #c62828; }
+
 .skip-btn {
   background: none;
   border: none;
-  color: #aaa;
-  font-size: 0.85rem;
+  color: #bbb;
+  font-size: 0.82rem;
   cursor: pointer;
-  margin-top: 12px;
-  text-decoration: underline;
+  margin-top: 10px;
+  transition: color 0.15s;
 }
-.skip-btn:hover { color: #666; }
-.user-bar { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.85rem;color:#888; }
-.user-bar .name { font-weight:600;color:#6c63ff; }
-.history-btn { background:none;border:none;color:#999;cursor:pointer;font-size:0.85rem;padding:2px 8px;border-radius:6px; }
-.history-btn:hover { background:#f0f0ff;color:#6c63ff; }
-.history-table { width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:12px; }
-.history-table th { background:#f0f0ff;color:#6c63ff;padding:8px;font-weight:600; }
-.history-table td { padding:8px;border-bottom:1px solid #eee; }
+.skip-btn:hover { color: #667eea; }
+
+.user-bar { display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:0.85rem;color:#999; }
+.user-bar .name { font-weight:700;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+.history-btn { background:none;border:none;color:#999;cursor:pointer;font-size:0.82rem;padding:4px 10px;border-radius:8px;transition:all 0.15s; }
+.history-btn:hover { background:#f0f0ff;color:#667eea; }
+
+.history-table { width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:12px;border-radius:10px;overflow:hidden; }
+.history-table th { background: linear-gradient(135deg,#667eea,#764ba2); color: white; padding: 9px 6px; font-weight: 700; font-size: 0.75rem; }
+.history-table td { padding:8px 6px;border-bottom:1px solid #eee; }
 .history-table tr:hover td { background:#f8f9ff; }
-.record-label { font-size:0.75rem;color:#aaa;margin-top:4px; }
-.record-value { font-size:1rem;font-weight:600;color:#333; }
+
+.record-label { font-size:0.72rem;color:#bbb;margin-top:4px;font-weight:500; }
+.record-value { font-size:1rem;font-weight:700;color:#333; }
+
 .reset-btn {
   background: none;
-  border: 1px solid #ddd;
+  border: 1px solid #e0e0ea;
   color: #999;
   padding: 6px 16px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
   cursor: pointer;
+  transition: all 0.15s;
 }
-.reset-btn:hover { background: #f5f5f5; }
+.reset-btn:hover { background: #f0f0ff; border-color: #667eea; color: #667eea; }
+
+#addWordForm { box-shadow: 0 4px 20px rgba(102,126,234,0.1); }
 </style>
 </head>
 <body>
@@ -183,6 +207,7 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
     <button class="lang-btn active" id="langCn" onclick="switchLang('cn')">🇨🇳 中文</button>
     <button class="lang-btn" id="langJp" onclick="switchLang('jp')">🇯🇵 日本語</button>
     <button class="lang-btn" id="langEn" onclick="switchLang('en')">🇬🇧 English</button>
+    <button class="lang-btn" id="langFr" onclick="switchLang('fr')">🇫🇷 Français</button>
   </div>
 
   <!-- LOADING -->
@@ -243,6 +268,7 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
         <option value="cn">🇨🇳 Chinese</option>
         <option value="jp">🇯🇵 Japanese</option>
         <option value="en">🇬🇧 English</option>
+        <option value="fr">🇫🇷 French</option>
       </select>
     </div>
     <div id="histList"></div>
@@ -958,6 +984,313 @@ objective|khách quan`.trim().split('\n').map(l => { const [ch, vi] = l.split('|
 
 const allEn = [...enBasic, ...enAdv];
 
+const frA1 = `bonjour|xin chào
+au revoir|tạm biệt
+merci|cảm ơn
+merci beaucoup|cảm ơn nhiều
+oui|có
+non|không
+s'il vous plaît|làm ơn
+pardon|xin lỗi
+excusez-moi|thứ lỗi
+je|tôi
+tu|bạn
+il|anh ấy
+elle|cô ấy
+nous|chúng tôi
+vous|các bạn
+ils|họ
+être|là
+avoir|có
+faire|làm
+aller|đi
+venir|đến
+parler|nói
+manger|ăn
+boire|uống
+dormir|ngủ
+lire|đọc
+écrire|viết
+comprendre|hiểu
+savoir|biết
+pouvoir|có thể
+vouloir|muốn
+devoir|phải
+marcher|đi bộ
+acheter|mua
+regarder|xem
+aimer|yêu
+parce que|bởi vì
+et|và
+mais|nhưng
+ou|hoặc
+très|rất
+beaucoup|nhiều
+peu|ít
+maintenant|bây giờ
+aujourd'hui|hôm nay
+hier|hôm qua
+demain|ngày mai
+toujours|luôn luôn
+souvent|thường xuyên
+ici|ở đây
+là|ở đó
+où|ở đâu
+quand|khi nào
+comment|như thế nào
+pourquoi|tại sao
+combien|bao nhiêu
+quel|nào
+bon|tốt
+mauvais|xấu
+grand|lớn
+petit|nhỏ
+vieux|cũ
+nouveau|mới
+beau|đẹp
+heureux|hạnh phúc
+triste|buồn
+chaud|nóng
+froid|lạnh
+l'eau|nước
+le pain|bánh mì
+le riz|cơm
+la viande|thịt
+le lait|sữa
+le café|cà phê
+le thé|trà
+la maison|nhà
+l'école|trường
+le travail|công việc
+le temps|thời gian
+l'argent|tiền
+le jour|ngày
+la nuit|đêm
+la semaine|tuần
+le mois|tháng
+l'année|năm
+le matin|sáng
+l'après-midi|chiều
+le soir|tối
+midi|trưa
+la famille|gia đình
+le père|cha
+la mère|mẹ
+le frère|anh trai
+la soeur|chị gái
+le fils|con trai
+la fille|con gái
+l'ami|bạn
+la personne|người
+l'homme|đàn ông
+la femme|phụ nữ
+l'enfant|trẻ em`.trim().split('\n').map(l => { const [ch, vi] = l.split('|'); return {ch, py:'', vi, level:'A1'}; });
+
+const frA2 = `le restaurant|nhà hàng
+l'hôtel|khách sạn
+l'hôpital|bệnh viện
+la banque|ngân hàng
+le marché|chợ
+la gare|ga tàu
+l'aéroport|sân bay
+la rue|đường phố
+la place|quảng trường
+la ville|thành phố
+le village|làng
+la campagne|nông thôn
+la mer|biển
+la montagne|núi
+la rivière|sông
+le parc|công viên
+le jardin|vườn
+la fleur|hoa
+l'arbre|cây
+l'animal|động vật
+le chat|mèo
+le chien|chó
+le cheval|ngựa
+l'oiseau|chim
+le poisson|cá
+prendre|lấy
+mettre|đặt
+donner|cho
+trouver|tìm
+chercher|tìm kiếm
+attendre|đợi
+monter|lên
+descendre|xuống
+entrer|vào
+sortir|ra
+partir|đi
+rester|ở lại
+commencer|bắt đầu
+finir|kết thúc
+continuer|tiếp tục
+changer|thay đổi
+apprendre|học
+étudier|học tập
+enseigner|dạy
+travailler|làm việc
+jouer|chơi
+chanter|hát
+danser|nhảy
+voyager|du lịch
+conduire|lái xe
+ouvrir|mở
+fermer|đóng
+habiter|sống
+vivre|sống
+naître|sinh ra
+mourir|chết
+pleurer|khóc
+rire|cười
+sentir|cảm thấy
+penser|suy nghĩ
+croire|tin
+décider|quyết định
+espérer|hy vọng
+choisir|chọn
+garder|giữ
+montrer|chỉ
+expliquer|giải thích
+répondre|trả lời
+demander|hỏi
+aider|giúp đỡ
+remercier|cảm ơn
+inviter|mời
+prêter|cho mượn
+rendre|trả lại
+apporter|mang đến
+emporter|mang đi
+la musique|âm nhạc
+le film|phim
+le livre|sách
+le journal|báo
+la télé|tivi
+le téléphone|điện thoại
+l'ordinateur|máy tính
+la voiture|xe hơi
+le vélo|xe đạp
+l'avion|máy bay
+le train|tàu hỏa
+le bus|xe buýt
+le billet|vé
+la chambre|phòng
+la cuisine|bếp
+la salle de bains|phòng tắm
+la porte|cửa
+la fenêtre|cửa sổ
+le lit|giường
+la table|bàn
+la chaise|ghế`.trim().split('\n').map(l => { const [ch, vi] = l.split('|'); return {ch, py:'', vi, level:'A2'}; });
+
+const frB1 = `l'opinion|ý kiến
+le problème|vấn đề
+la solution|giải pháp
+l'exemple|ví dụ
+la différence|khác biệt
+le changement|thay đổi
+le développement|phát triển
+l'amélioration|cải thiện
+l'éducation|giáo dục
+la santé|sức khỏe
+l'environnement|môi trường
+l'économie|kinh tế
+la politique|chính trị
+la société|xã hội
+la culture|văn hóa
+l'histoire|lịch sử
+l'avenir|tương lai
+le succès|thành công
+l'échec|thất bại
+la peur|sợ hãi
+l'espoir|hy vọng
+l'amour|tình yêu
+le bonheur|hạnh phúc
+la tristesse|buồn
+la colère|tức giận
+l'expérience|kinh nghiệm
+la connaissance|kiến thức
+l'information|thông tin
+la recherche|nghiên cứu
+l'entreprise|công ty
+le projet|dự án
+l'équipe|đội
+l'accord|thỏa thuận
+le droit|quyền
+la liberté|tự do
+l'égalité|bình đẳng
+la justice|công lý
+la paix|hòa bình
+la guerre|chiến tranh
+le monde|thế giới
+le pays|đất nước
+le gouvernement|chính phủ
+la loi|luật
+l'impôt|thuế
+le budget|ngân sách
+la concurrence|cạnh tranh
+le commerce|thương mại
+le marché|thị trường
+la monnaie|tiền tệ
+le prix|giá cả
+la qualité|chất lượng
+la quantité|số lượng
+augmenter|tăng lên
+diminuer|giảm xuống
+améliorer|cải thiện
+détruire|phá hủy
+construire|xây dựng
+créer|tạo ra
+développer|phát triển
+produire|sản xuất
+vendre|bán
+distribuer|phân phối
+gérer|quản lý
+organiser|tổ chức
+participer|tham gia
+contribuer|đóng góp
+négocier|đàm phán
+résoudre|giải quyết
+analyser|phân tích
+évaluer|đánh giá
+comparer|so sánh
+présenter|trình bày
+respecter|tôn trọng
+protéger|bảo vệ
+accepter|chấp nhận
+refuser|từ chối
+permettre|cho phép
+interdire|cấm
+obliger|bắt buộc
+suggérer|đề xuất
+recommander|khuyến nghị
+préférer|thích hơn
+mériter|xứng đáng
+lutter|đấu tranh
+avancer|tiến lên
+reculer|lùi lại
+réaliser|thực hiện
+remplacer|thay thế
+transformer|biến đổi
+atteindre|đạt được
+augmenter|gia tăng
+réduire|giảm
+intégrer|hội nhập
+adopter|áp dụng
+renforcer|củng cố
+prévenir|ngăn chặn
+révéler|tiết lộ
+représenter|đại diện
+assurer|đảm bảo
+obtenir|đạt được
+fournir|cung cấp
+développer|phát triển
+encourager|khuyến khích
+permettre|cho phép`.trim().split('\n').map(l => { const [ch, vi] = l.split('|'); return {ch, py:'', vi, level:'B1'}; });
+
+const allFr = [...frA1, ...frA2, ...frB1];
+
 let currentLang = 'cn';
 let allWords = [];
 let allWordsXlsx = [];
@@ -1051,7 +1384,7 @@ function toggleAddWord() {
   const form = document.getElementById('addWordForm');
   form.style.display = form.style.display === 'none' ? '' : 'none';
   if (form.style.display !== 'none') {
-    document.getElementById('addReadingGroup').style.display = currentLang === 'en' ? 'none' : '';
+  document.getElementById('addReadingGroup').style.display = (currentLang === 'en' || currentLang === 'fr') ? 'none' : '';
     document.getElementById('addWordCh').focus();
     showCustomWordList();
   }
@@ -1149,6 +1482,9 @@ function refreshLevelScreen() {
   } else if (currentLang === 'en') {
     allWords = mergeCustomWords(allEn);
     showLevelScreen();
+  } else if (currentLang === 'fr') {
+    allWords = mergeCustomWords(allFr);
+    showLevelScreen();
   }
 }
 
@@ -1157,6 +1493,7 @@ function switchLang(lang) {
   document.getElementById('langCn').className = 'lang-btn' + (lang === 'cn' ? ' active' : '');
   document.getElementById('langJp').className = 'lang-btn' + (lang === 'jp' ? ' active' : '');
   document.getElementById('langEn').className = 'lang-btn' + (lang === 'en' ? ' active' : '');
+  document.getElementById('langFr').className = 'lang-btn' + (lang === 'fr' ? ' active' : '');
 
   document.getElementById('nextBtn').textContent = 'Tiếp';
   document.getElementById('nextBtn').onclick = nextWord;
@@ -1175,6 +1512,9 @@ function switchLang(lang) {
     showLevelScreen();
   } else if (lang === 'en') {
     allWords = mergeCustomWords(allEn);
+    showLevelScreen();
+  } else if (lang === 'fr') {
+    allWords = mergeCustomWords(allFr);
     showLevelScreen();
   } else {
     document.getElementById('screenLoading').classList.add('active');
@@ -1227,10 +1567,10 @@ function showLevelScreen() {
   document.getElementById('screenLoading').classList.remove('active');
   document.getElementById('screenLevel').classList.add('active');
 
-  const titles = { cn:'HSK 中文练习', jp:'JLPT 日本語練習', en:'English Practice' };
+  const titles = { cn:'HSK 中文练习', jp:'JLPT 日本語練習', en:'English Practice', fr:'Français A1-B1' };
   document.getElementById('levelTitle').textContent = titles[currentLang] || 'Practice';
   document.getElementById('startBtn').textContent = 'Bắt đầu';
-  document.getElementById('addReadingGroup').style.display = currentLang === 'en' ? 'none' : '';
+  document.getElementById('addReadingGroup').style.display = (currentLang === 'en' || currentLang === 'fr') ? 'none' : '';
 
   const levels = {};
   for (const w of allWords) levels[w.level] = (levels[w.level] || 0) + 1;
@@ -1264,11 +1604,13 @@ function startQuiz() {
   document.getElementById('wordsTotal').textContent = filteredWords.length + ' từ';
 
   const isEn = currentLang === 'en';
+  const isFr = currentLang === 'fr';
   const isJp = currentLang === 'jp';
+  const hideReading = isEn || isFr;
   const rg = document.getElementById('readingGroup');
-  rg.style.display = isEn ? 'none' : '';
+  rg.style.display = hideReading ? 'none' : '';
   document.getElementById('readingLabel').textContent = isJp ? 'Hiragana' : 'Pinyin (phiên âm)';
-  document.getElementById('pinyinInput').placeholder = isJp ? 'vd: あう' : (isEn ? '' : 'vd: nǐ hǎo');
+  document.getElementById('pinyinInput').placeholder = isJp ? 'vd: あう' : (hideReading ? '' : 'vd: nǐ hǎo');
 
   document.getElementById('nextBtn').textContent = 'Tiếp';
   document.getElementById('nextBtn').onclick = nextWord;
@@ -1333,7 +1675,7 @@ function showWord() {
   document.getElementById('submitBtn').disabled = false;
   document.getElementById('nextBtn').disabled = true;
   answered = false;
-  const focusEl = currentLang === 'en' ? document.getElementById('translationInput') : document.getElementById('pinyinInput');
+  const focusEl = (currentLang === 'en' || currentLang === 'fr') ? document.getElementById('translationInput') : document.getElementById('pinyinInput');
   focusEl.focus();
 }
 
@@ -1341,32 +1683,34 @@ function checkAnswer() {
   if (answered) return;
   const word = filteredWords[order[currentIndex]];
   const isEn = currentLang === 'en';
-  const pi = isEn ? '' : document.getElementById('pinyinInput').value;
+  const isFr = currentLang === 'fr';
+  const hideReading = isEn || isFr;
+  const pi = hideReading ? '' : document.getElementById('pinyinInput').value;
   const ti = document.getElementById('translationInput').value;
-  if ((!isEn && !pi.trim()) || !ti.trim()) {
+  if ((!hideReading && !pi.trim()) || !ti.trim()) {
     document.getElementById('feedback').className = 'feedback show';
-    document.getElementById('feedback').innerHTML = isEn ? 'Vui lòng nhập nghĩa tiếng Việt' : 'Vui lòng điền cả hai ô';
+    document.getElementById('feedback').innerHTML = hideReading ? 'Vui lòng nhập nghĩa tiếng Việt' : 'Vui lòng điền cả hai ô';
     return;
   }
   const isJp = currentLang === 'jp';
-  const pyOk = isEn || checkPinyin(pi, word.py);
+  const pyOk = hideReading || checkPinyin(pi, word.py);
   const viOk = checkTranslation(ti, word.vi);
   const pe = document.getElementById('pinyinInput');
   const te = document.getElementById('translationInput');
   const fb = document.getElementById('feedback');
   answered = true;
   if (pyOk && viOk) {
-    if (!isEn) pe.className = 'correct';
+    if (!hideReading) pe.className = 'correct';
     te.className = 'correct';
     fb.className = 'feedback correct'; fb.innerHTML = '✓ Chính xác!';
     correctCount++; streak++;
     if (streak > maxStreak) maxStreak = streak;
   } else {
-    if (!isEn) pe.className = pyOk ? 'correct' : 'wrong';
+    if (!hideReading) pe.className = pyOk ? 'correct' : 'wrong';
     te.className = viOk ? 'correct' : 'wrong';
     fb.className = 'feedback wrong';
     const parts = [];
-    if (!isEn && !pyOk) parts.push(`${isJp ? 'Hiragana' : 'Pinyin'}: ${word.py}`);
+    if (!hideReading && !pyOk) parts.push(`${isJp ? 'Hiragana' : 'Pinyin'}: ${word.py}`);
     if (!viOk) parts.push(`Nghĩa: ${word.vi}`);
     fb.innerHTML = `✗ ${parts.join(' | ')}`;
     wrongCount++; streak = 0;
@@ -1433,10 +1777,12 @@ function skipWord() {
   updateScore();
   const word = filteredWords[order[currentIndex]];
   const isEn = currentLang === 'en';
+  const isFr = currentLang === 'fr';
+  const hideReading = isEn || isFr;
   const fb = document.getElementById('feedback');
   fb.className = 'feedback wrong';
-  fb.innerHTML = `Đã bỏ qua: ${isEn ? word.ch + ' — ' + word.vi : word.py + ' — ' + word.vi}`;
-  if (!isEn) {
+  fb.innerHTML = `Đã bỏ qua: ${hideReading ? word.ch + ' — ' + word.vi : word.py + ' — ' + word.vi}`;
+  if (!hideReading) {
     document.getElementById('pinyinInput').value = word.py;
     document.getElementById('pinyinInput').className = 'wrong';
   }
@@ -1455,7 +1801,9 @@ function speakCurrent() {
   const enVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('en'));
   const jpVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   const zhVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('zh'));
-  const targetVoice = currentLang === 'jp' ? jpVoice : (currentLang === 'en' ? enVoice : zhVoice);
+  const frVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('fr'));
+  const voiceMap = { jp: jpVoice, en: enVoice, fr: frVoice };
+  const targetVoice = voiceMap[currentLang] || zhVoice;
 
   if (targetVoice) {
     window.speechSynthesis.cancel();
