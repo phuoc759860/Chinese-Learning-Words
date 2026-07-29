@@ -467,16 +467,12 @@ function skipWord() {
   document.getElementById('nextBtn').disabled = false;
 }
 
-function playAudio(url) {
-  const a = new Audio(url);
-  a.volume = 1;
-  a.play().catch(() => {});
-}
-
 function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
-  playAudio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`);
+  const a = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+  a.volume = 1;
+  a.play().catch(() => {});
 }
 
 function resetStats() {
