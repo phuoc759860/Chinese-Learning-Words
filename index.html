@@ -201,6 +201,26 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
     <div class="btn-row">
       <button class="btn btn-primary" id="startBtn" onclick="startQuiz()" disabled>Bắt đầu</button>
     </div>
+    <button class="skip-btn" id="addWordToggle" onclick="toggleAddWord()" style="margin-top:8px;">➕ Thêm từ mới</button>
+    <div id="addWordForm" style="display:none;margin-top:12px;padding:16px;background:#f8f9ff;border-radius:12px;text-align:left;">
+      <div class="input-group">
+        <label for="addWordCh">Từ</label>
+        <input type="text" id="addWordCh" placeholder="vd: 你好 / hello">
+      </div>
+      <div class="input-group" id="addReadingGroup">
+        <label for="addWordPy">Phiên âm</label>
+        <input type="text" id="addWordPy" placeholder="vd: nǐ hǎo / あう">
+      </div>
+      <div class="input-group">
+        <label for="addWordVi">Nghĩa tiếng Việt</label>
+        <input type="text" id="addWordVi" placeholder="vd: xin chào">
+      </div>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="btn btn-primary" onclick="saveCustomWord()" style="font-size:0.9rem;padding:10px;">💾 Lưu</button>
+        <button class="btn btn-secondary" onclick="toggleAddWord()" style="font-size:0.9rem;padding:10px;">Hủy</button>
+      </div>
+      <div id="customWordList" style="margin-top:12px;font-size:0.85rem;"></div>
+    </div>
   </div>
 
   <!-- HISTORY -->
@@ -935,6 +955,7 @@ const allEn = [...enBasic, ...enAdv];
 
 let currentLang = 'cn';
 let allWords = [];
+let allWordsXlsx = [];
 let filteredWords = [];
 let currentIndex = 0;
 let correctCount = 0;
@@ -1012,6 +1033,81 @@ function backToLevelFromHist() {
   document.getElementById('screenLevel').classList.add('active');
 }
 
+function getCustomWords(lang) {
+  return JSON.parse(localStorage.getItem('customWords_' + lang) || '[]');
+}
+
+function mergeCustomWords(base) {
+  const custom = getCustomWords(currentLang);
+  return custom.length ? [...base, ...custom] : base;
+}
+
+function toggleAddWord() {
+  const form = document.getElementById('addWordForm');
+  form.style.display = form.style.display === 'none' ? '' : 'none';
+  if (form.style.display !== 'none') {
+    document.getElementById('addReadingGroup').style.display = currentLang === 'en' ? 'none' : '';
+    document.getElementById('addWordCh').focus();
+    showCustomWordList();
+  }
+}
+
+function showCustomWordList() {
+  const words = getCustomWords(currentLang);
+  const el = document.getElementById('customWordList');
+  if (!words.length) { el.innerHTML = '<span style="color:#aaa;">Chưa có từ nào</span>'; return; }
+  let html = `<strong>Từ của tôi (${words.length}):</strong><br>`;
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #eee;">
+      <span><b>${w.ch}</b>${w.py ? ' (' + w.py + ')' : ''} — ${w.vi}</span>
+      <button onclick="deleteCustomWord(${i})" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:0.8rem;">✕</button>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function saveCustomWord() {
+  const ch = document.getElementById('addWordCh').value.trim();
+  const py = document.getElementById('addWordPy').value.trim();
+  const vi = document.getElementById('addWordVi').value.trim();
+  if (!ch || !vi) { alert('Vui lòng nhập từ và nghĩa'); return; }
+  const words = getCustomWords(currentLang);
+  if (words.some(w => w.ch === ch)) { alert('Từ này đã có trong danh sách'); return; }
+  words.push({ ch, py, vi, level: 'Từ của tôi' });
+  localStorage.setItem('customWords_' + currentLang, JSON.stringify(words));
+  document.getElementById('addWordCh').value = '';
+  document.getElementById('addWordPy').value = '';
+  document.getElementById('addWordVi').value = '';
+  showCustomWordList();
+  refreshLevelScreen();
+}
+
+function deleteCustomWord(idx) {
+  const words = getCustomWords(currentLang);
+  words.splice(idx, 1);
+  localStorage.setItem('customWords_' + currentLang, JSON.stringify(words));
+  showCustomWordList();
+  refreshLevelScreen();
+}
+
+function refreshLevelScreen() {
+  if (currentLang === 'cn') {
+    if (typeof allWordsXlsx !== 'undefined' && allWordsXlsx.length) {
+      allWords = mergeCustomWords(allWordsXlsx);
+      showLevelScreen();
+    } else {
+      loadXlsx();
+    }
+  } else if (currentLang === 'jp') {
+    allWords = mergeCustomWords(allJp);
+    showLevelScreen();
+  } else if (currentLang === 'en') {
+    allWords = mergeCustomWords(allEn);
+    showLevelScreen();
+  }
+}
+
 function switchLang(lang) {
   currentLang = lang;
   document.getElementById('langCn').className = 'lang-btn' + (lang === 'cn' ? ' active' : '');
@@ -1028,12 +1124,13 @@ function switchLang(lang) {
   document.getElementById('screenLoading').classList.remove('active');
 
   document.getElementById('userNameDisplay').textContent = getUserName();
+  document.getElementById('addWordForm').style.display = 'none';
 
   if (lang === 'jp') {
-    allWords = allJp;
+    allWords = mergeCustomWords(allJp);
     showLevelScreen();
   } else if (lang === 'en') {
-    allWords = allEn;
+    allWords = mergeCustomWords(allEn);
     showLevelScreen();
   } else {
     document.getElementById('screenLoading').classList.add('active');
@@ -1058,7 +1155,7 @@ async function loadXlsx() {
 }
 
 function parseWorkbook(wb) {
-  allWords = [];
+  allWordsXlsx = [];
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
@@ -1070,14 +1167,15 @@ function parseWorkbook(wb) {
       const py = String(row[2] || '').trim();
       const vi = String(row[3] || '').trim();
       if (ch && py && vi) {
-        allWords.push({ ch, py, vi, level: 'HSK' + level });
+        allWordsXlsx.push({ ch, py, vi, level: 'HSK' + level });
       }
     }
   }
-  if (allWords.length === 0) {
+  if (allWordsXlsx.length === 0) {
     document.getElementById('screenLoading').innerHTML = '<p style="color:#c62828;">✗ Không tìm thấy từ vựng nào trong file</p>';
     return;
   }
+  allWords = mergeCustomWords(allWordsXlsx);
   showLevelScreen();
 }
 
@@ -1088,6 +1186,7 @@ function showLevelScreen() {
   const titles = { cn:'HSK 中文练习', jp:'JLPT 日本語練習', en:'English Practice' };
   document.getElementById('levelTitle').textContent = titles[currentLang] || 'Practice';
   document.getElementById('startBtn').textContent = 'Bắt đầu';
+  document.getElementById('addReadingGroup').style.display = currentLang === 'en' ? 'none' : '';
 
   const levels = {};
   for (const w of allWords) levels[w.level] = (levels[w.level] || 0) + 1;
