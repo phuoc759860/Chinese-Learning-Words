@@ -471,21 +471,25 @@ function skipWord() {
 function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
+  const btn = document.getElementById('speakBtn');
 
-  const audio = document.getElementById('ttsAudio');
-  audio.src = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`;
-  audio.volume = 1;
-  audio.playbackRate = 0.9;
-  audio.play().catch(() => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'zh-CN';
-      u.rate = 0.9;
-      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-      window.speechSynthesis.speak(u);
-    }
-  });
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    u.rate = 0.9;
+    u.volume = 1;
+    u.onstart = () => btn.textContent = '🔊';
+    u.onerror = () => {
+      const a = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+      a.volume = 1; a.play();
+    };
+    window.speechSynthesis.speak(u);
+  } else {
+    const a = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`);
+    a.volume = 1; a.play();
+  }
 }
 
 function resetStats() {
@@ -506,7 +510,11 @@ document.addEventListener('keydown', function(e) {
 
 if ('speechSynthesis' in window) {
   speechSynthesis.getVoices();
-  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = () => {
+    speechSynthesis.getVoices();
+    speechSynthesis.cancel();
+    speechSynthesis.resume();
+  };
 }
 loadXlsx();
 </script>
