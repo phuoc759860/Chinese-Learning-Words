@@ -474,7 +474,21 @@ function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
 
-  if ('speechSynthesis' in window) {
+  const voices = speechSynthesis.getVoices();
+  const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+
+  if (zhVoice) {
+    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = zhVoice;
+    u.rate = 0.9;
+    u.volume = 1;
+    window.speechSynthesis.speak(u);
+    return;
+  }
+
+  if (voices.length > 0) {
     window.speechSynthesis.cancel();
     if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     const u = new SpeechSynthesisUtterance(text);
@@ -482,7 +496,12 @@ function speakCurrent() {
     u.rate = 0.9;
     u.volume = 1;
     window.speechSynthesis.speak(u);
+    return;
   }
+
+  const a = new Audio(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=1')}`);
+  a.volume = 1;
+  a.play();
 }
 
 function resetStats() {
@@ -501,13 +520,20 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+let hasChineseVoice = false;
 if ('speechSynthesis' in window) {
-  speechSynthesis.getVoices();
-  speechSynthesis.onvoiceschanged = () => {
-    speechSynthesis.getVoices();
-    speechSynthesis.cancel();
-    speechSynthesis.resume();
+  const checkVoices = () => {
+    const voices = speechSynthesis.getVoices();
+    hasChineseVoice = voices.some(v => v.lang.startsWith('zh'));
+    console.log('Speech: found', voices.length, 'voices, Chinese:', hasChineseVoice);
+    voices.forEach(v => console.log(' -', v.name, v.lang));
+    if (voices.length > 0) {
+      speechSynthesis.cancel();
+      speechSynthesis.resume();
+    }
   };
+  checkVoices();
+  speechSynthesis.onvoiceschanged = checkVoices;
 }
 loadXlsx();
 </script>
