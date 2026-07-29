@@ -202,7 +202,6 @@ h1 { font-size: 1.2rem; color: #666; margin-bottom: 8px; letter-spacing: 2px; }
       </div>
       <div class="progress" id="progressText">1 / 100</div>
     </div>
-    <audio id="ttsAudio" style="display:none"></audio>
     <div class="input-group">
       <label for="pinyinInput">Pinyin (phiên âm)</label>
       <input type="text" id="pinyinInput" placeholder="vd: nǐ hǎo" autocomplete="off">
@@ -467,8 +466,6 @@ function skipWord() {
   document.getElementById('submitBtn').disabled = true;
   document.getElementById('nextBtn').disabled = false;
 }
-
-let audioCtx;
 
 function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
