@@ -471,8 +471,7 @@ function speakCurrent() {
   const text = document.getElementById('chineseWord').textContent;
   if (!text || text === '✓' || text === '🎉') return;
 
-  const voices = speechSynthesis.getVoices();
-  const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+  const zhVoice = speechSynthesis.getVoices().find(v => v.lang.startsWith('zh'));
 
   if (zhVoice) {
     window.speechSynthesis.cancel();
@@ -480,18 +479,6 @@ function speakCurrent() {
     const u = new SpeechSynthesisUtterance(text);
     u.voice = zhVoice;
     u.rate = 0.9;
-    u.volume = 1;
-    window.speechSynthesis.speak(u);
-    return;
-  }
-
-  if (voices.length > 0) {
-    window.speechSynthesis.cancel();
-    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'zh-CN';
-    u.rate = 0.9;
-    u.volume = 1;
     window.speechSynthesis.speak(u);
     return;
   }
